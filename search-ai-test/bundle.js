@@ -2886,3 +2886,200 @@ window.__ticaryApply = function () {
 
   });
 })();
+
+(function(){
+  // TICARY — dynamic sticky top for filters (desktop only)
+  if (window.__tcStickyFiltersTopV1) return;
+  window.__tcStickyFiltersTopV1 = 1;
+
+  function isDesktop(){
+    return window.matchMedia && window.matchMedia('(min-width: 901px)').matches;
+  }
+
+  function update(){
+    if (!isDesktop()) return;
+
+    const header = document.getElementById('tc-header');
+    const root = document.documentElement;
+    if (!root) return;
+
+    // When header is visible, use its bottom as the offset.
+    // When it's gone (bottom <= 0), collapse to a small top padding.
+    let top = 0;
+
+    if (header && header.getBoundingClientRect){
+      const r = header.getBoundingClientRect();
+      const bottom = Math.round(r.bottom);
+      if (bottom > 0) top = bottom + 0; // 12px gap under header
+    }
+
+    root.style.setProperty('--tc-sticky-top', top + 'px');
+  }
+
+  update();
+  window.addEventListener('scroll', update, { passive:true });
+  window.addEventListener('resize', update, { passive:true });
+})();
+
+(function(){
+  // TICARY — Hard lock horizontal pan (desktop) v2
+  if (window.__tcLockX_v2) return;
+  window.__tcLockX_v2 = 1;
+
+  const DESKTOP = !window.matchMedia || window.matchMedia("(min-width: 901px)").matches;
+  if (!DESKTOP) return;
+
+  const root = document.scrollingElement || document.documentElement;
+
+  function lockX(){
+    try{
+      if (root && root.scrollLeft) root.scrollLeft = 0;
+      if (document.documentElement.scrollLeft) document.documentElement.scrollLeft = 0;
+      if (document.body.scrollLeft) document.body.scrollLeft = 0;
+
+      // Also snap any inner scrollers that might exist
+      const els = [
+        document.querySelector("#as-filters"),
+        document.querySelector("#as-grid"),
+        document.querySelector("#as-layout"),
+        document.querySelector("#as-content"),
+        document.querySelector("#vehicles-list-wrapper"),
+        document.querySelector(".ds-grid"),
+        document.querySelector(".ds-wrap")
+      ].filter(Boolean);
+
+      for (const el of els){
+        if (el.scrollLeft) el.scrollLeft = 0;
+      }
+    }catch(e){}
+  }
+
+  // Capture phase = intercept earlier (reduces “gesture” UI + wiggle)
+  document.addEventListener("wheel", (e) => {
+    const dx = e.deltaX || 0;
+    const dy = e.deltaY || 0;
+
+    // If there is any real horizontal intent, block it
+    if (Math.abs(dx) > 0.5 && Math.abs(dx) >= Math.abs(dy)) {
+      e.preventDefault();
+      lockX();
+    }
+  }, { passive:false, capture:true });
+
+  window.addEventListener("scroll", lockX, { passive:true });
+  window.addEventListener("resize", lockX, { passive:true });
+
+  setTimeout(lockX, 0);
+  setTimeout(lockX, 120);
+})();
+
+(function(){
+  // TICARY — on any filter change, jump to top (desktop only)
+  if (window.__tcFiltersJumpTopV1) return;
+  window.__tcFiltersJumpTopV1 = 1;
+
+  const DESKTOP = window.matchMedia && window.matchMedia("(min-width: 901px)").matches;
+  if (!DESKTOP) return;
+
+  const filters = document.getElementById("as-filters");
+  if (!filters) return;
+
+  let t = 0;
+  function jumpTop(){
+    clearTimeout(t);
+    t = setTimeout(()=>{
+      // smooth but quick
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 40);
+  }
+
+  // Any select / checkbox / radio / range / text input changes in filters
+  filters.addEventListener("change", (e)=>{
+    const el = e.target;
+    if (!el) return;
+    // ignore irrelevant stuff
+    if (el.closest("button")) return;
+    jumpTop();
+  }, true);
+
+  // Catch "Apply" buttons too (if you have one)
+  filters.addEventListener("click", (e)=>{
+    const apply = e.target?.closest?.("#asf-apply, [data-filter-apply], .asf-apply");
+    if (!apply) return;
+    jumpTop();
+  }, true);
+})();
+
+/* TICARY — Lightweight override for "Change filters" mode (desktop only)
+   - No MutationObserver, no scroll listeners
+   - Click toggles filters only (no scroll-to-top)
+   - Small interval corrects label if Part B flips it to "Change filters"
+*/
+(function(){
+  if (window.__tcFixChangeFiltersLiteV1) return;
+  window.__tcFixChangeFiltersLiteV1 = 1;
+
+  const mqDesktop = window.matchMedia ? window.matchMedia('(min-width: 901px)') : null;
+  const isDesktop = () => !mqDesktop || mqDesktop.matches;
+
+  function labelForState(){
+    const closed = document.body.classList.contains('as-no-filters');
+    return closed ? 'Show filters' : 'Hide filters';
+  }
+
+  function setLabel(btn){
+    if (!btn || !isDesktop()) return;
+    const want = labelForState();
+    if (btn.textContent !== want) btn.textContent = want;
+  }
+
+  function init(){
+    const btn = document.getElementById('as-filters-toggle-new');
+    if (!btn) return false;
+
+    // Ensure label is correct now
+    setLabel(btn);
+
+    // Override click BEFORE Part B's handler (capture)
+    if (!btn.__tcBoundLite){
+      btn.__tcBoundLite = true;
+
+      btn.addEventListener('click', function(e){
+        if (!isDesktop()) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+        document.body.classList.toggle('as-no-filters');
+        setLabel(btn);
+
+        setTimeout(() => {
+          if (window.map && typeof window.map.resize === 'function') window.map.resize();
+        }, 120);
+      }, true);
+    }
+
+    // Low-frequency “label corrector”
+    // Only does anything if the label is wrong (e.g., becomes "Change filters")
+    if (!window.__tcFixChangeFiltersLiteTimer){
+      window.__tcFixChangeFiltersLiteTimer = setInterval(() => {
+        if (!isDesktop()) return;
+        const b = document.getElementById('as-filters-toggle-new');
+        if (!b) return;
+
+        // Only correct if it has drifted
+        const want = labelForState();
+        if (b.textContent !== want) b.textContent = want;
+      }, 350);
+    }
+
+    return true;
+  }
+
+  let tries = 0;
+  const t = setInterval(() => {
+    tries++;
+    if (init() || tries > 80) clearInterval(t);
+  }, 150);
+})();

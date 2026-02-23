@@ -970,3 +970,564 @@ console.log("✅ popup.js loaded (GitHub)");
     burst();
   }
 })();
+
+/* =========================================================
+   TICARY — Popup Map Aid (Radius UI + marker popups)
+   - Exposes: window.__tcdmAttachRadius(params)
+   - Idempotent
+========================================================= */
+(function(){
+  if (window.__tcdmMapAid_v74) return;
+  window.__tcdmMapAid_v74 = 1;
+
+  function ensureRadiusUI(){
+    const mount = document.getElementById('tcdm-radiusMount');
+    const hintText = document.getElementById('tcdm-mapHintText');
+    const hint = hintText?.parentElement;
+
+    const host = mount || hint;
+    if (!host) return;
+
+    if (document.getElementById('tcdm-mapRadiusRow')) return;
+
+    const row = document.createElement('div');
+    row.id = 'tcdm-mapRadiusRow';
+    row.innerHTML = `
+      <div id="tcdm-radiusVal">20 mi</div>
+      <div id="tcdm-radiusCtrl">
+        <button id="tcdm-radiusMinus" class="tcdm-mapBtn" type="button" aria-label="Decrease radius">−</button>
+        <input id="tcdm-radius" type="range" min="5" max="300" step="5" value="20">
+        <button id="tcdm-radiusPlus" class="tcdm-mapBtn" type="button" aria-label="Increase radius">+</button>
+      </div>
+      <button id="tcdm-mapWithin" class="tcdm-mapBtn" type="button">Show within</button>
+    `;
+    host.appendChild(row);
+  }
+
+  function parseMoreCount(){
+    const more = document.getElementById('as-more');
+    if (!more) return 0;
+    const cs = window.getComputedStyle(more);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity || 1) === 0) return 0;
+    const txt = (more.textContent || '').replace(/\s+/g,' ').trim();
+    const m = txt.match(/See\s+(\d+)\s+more/i);
+    return m ? parseInt(m[1],10) || 0 : 0;
+  }
+
+  function clickMoreOnce(){
+    const more = document.getElementById('as-more');
+    if (!more) return false;
+    const cs = window.getComputedStyle(more);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity || 1) === 0) return false;
+    more.click();
+    return true;
+  }
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  async function waitForCardChange(prevCount){
+    for (let i=0;i<12;i++){
+      const now = document.querySelectorAll('.as-card').length;
+      if (now > prevCount) return true;
+      await sleep(100);
+    }
+    return false;
+  }
+
+  function groupKey(lat, lng){
+    const r = (n) => (Math.round(n * 10000) / 10000).toFixed(4);
+    return r(lat) + ',' + r(lng);
+  }
+
+  // === Exposed hook that popup.js calls ===
+  window.__tcdmAttachRadius = function(params){
+    try{
+      ensureRadiusUI();
+
+      const { map, current, haversineMiles, pick, clean, isFiniteNum, moneyGBP } = params || {};
+      if (!map || !current || !isFiniteNum(current.lat) || !isFiniteNum(current.lng)) return;
+      if (!window.mapboxgl) return;
+
+      try { map.resize(); } catch(_){}
+
+      // OPEN ZOOM (less zoomed-in on open)
+      try{
+        const OPEN_ZOOM = 7.4;
+        const MAX_OPEN_ZOOM = 12.0;
+        const target = Math.min(OPEN_ZOOM, MAX_OPEN_ZOOM);
+        map.easeTo({ center:[current.lng, current.lat], zoom: target, duration: 380 });
+      }catch(_){}
+
+      const pill      = document.getElementById('tcdm-mapPill');
+      const hintText  = document.getElementById('tcdm-mapHintText');
+
+      const radiusInput = document.getElementById('tcdm-radius');
+      const radiusValEl = document.getElementById('tcdm-radiusVal');
+      const withinBtn   = document.getElementById('tcdm-mapWithin');
+      const minusBtn    = document.getElementById('tcdm-radiusMinus');
+      const plusBtn     = document.getElementById('tcdm-radiusPlus');
+
+      if (!radiusInput || !radiusValEl || !withinBtn) return;
+
+      function getRadiusMiles(){
+        const v = parseFloat(radiusInput.value);
+        if (!Number.isFinite(v)) return 20;
+        return (v >= 300) ? Infinity : v;
+      }
+      function labelForRadius(r){
+        return (r === Infinity) ? 'National' : `${Math.round(r)} mi`;
+      }
+      function setRadiusLabel(){
+        const raw = parseFloat(radiusInput.value);
+        radiusValEl.textContent = (raw >= 300) ? 'National' : `${Math.round(raw)} mi`;
+      }
+      function clampRadius(v){
+        const min = parseFloat(radiusInput.min || '5');
+        const max = parseFloat(radiusInput.max || '300');
+        v = Math.round(v / 5) * 5;
+        return Math.max(min, Math.min(max, v));
+      }
+      function setRadius(v){
+        const vv = (v === Infinity) ? 300 : v;
+        radiusInput.value = String(clampRadius(vv));
+        setRadiusLabel();
+        updateUI();
+      }
+
+      if (minusBtn){
+        minusBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); setRadius((parseFloat(radiusInput.value)||20) - 20); };
+      }
+      if (plusBtn){
+        plusBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); setRadius((parseFloat(radiusInput.value)||20) + 20); };
+      }
+
+      const items = Array.isArray(window.__ticaryItems) ? window.__ticaryItems : [];
+      const byId = new Map();
+      for (const it of items){
+        const d = it && (it.data || it);
+        const id = clean(pick(d, ['id','vehicle_id','vehicleId']));
+        if (id) byId.set(String(id), d);
+      }
+
+      function getVisibleVehicleIds(){
+        const cards = Array.from(document.querySelectorAll('.as-card'));
+        return cards
+          .filter(c => {
+            if (!c || c.offsetParent === null) return false;
+            const cs = window.getComputedStyle(c);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity || 1) === 0) return false;
+            return true;
+          })
+          .map(c => clean(
+            c.dataset?.vehicleId ||
+            c.getAttribute('data-vehicle-id') ||
+            c.getAttribute('data-vehicleid') ||
+            c.getAttribute('data-id')
+          ))
+          .filter(Boolean);
+      }
+
+      const curId = clean(pick(current, ['id','vehicle_id','vehicleId']));
+
+      function coverUrl(d){
+        return clean(pick(d, ['image_cover_url','cover','primary_image','thumb','image','cover_image_url','image_url']) || '');
+      }
+      function milesText(d){
+        const raw = pick(d, ['mileage','miles','odometer_miles']);
+        const n = parseFloat(String(raw ?? '').replace(/[^0-9.]/g,''));
+        return Number.isFinite(n) ? `${Math.round(n).toLocaleString()} mi` : '';
+      }
+
+      function buildPoolFromVisible(){
+        const visibleIds = getVisibleVehicleIds();
+        const pool = [];
+
+        for (const id of visibleIds){
+          const d = byId.get(String(id));
+          if (!d) continue;
+
+          const did = clean(pick(d, ['id','vehicle_id','vehicleId']));
+          if (curId && did && String(did) === String(curId)) continue;
+
+          const lat = parseFloat(String(pick(d, ['lat','latitude','dealer_lat','location_lat','vehicle_lat']) || ''));
+          const lng = parseFloat(String(pick(d, ['lng','lon','long','longitude','dealer_lng','dealer_lon','vehicle_lng','vehicle_lon']) || ''));
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+          const dist = haversineMiles(current.lat, current.lng, lat, lng);
+          if (dist < 0.08) continue;
+
+          pool.push({ d, lat, lng, dist, did });
+        }
+
+        pool.sort((a,b) => a.dist - b.dist);
+        return pool;
+      }
+
+      const PAGE = 24;
+      const shownIds = new Set();
+      let shown = 0;
+
+      const bounds = new mapboxgl.LngLatBounds([current.lng, current.lat],[current.lng, current.lat]);
+      let pool = buildPoolFromVisible();
+
+      const createdMarkers = [];
+      function clearCreatedMarkers(){
+        try{ createdMarkers.forEach(m => m.remove()); }catch(_){}
+        createdMarkers.length = 0;
+      }
+
+      function estimateTotalFiltered(){
+        const visibleIds = getVisibleVehicleIds();
+        const more = parseMoreCount();
+        return Math.max(1, visibleIds.length + more);
+      }
+
+      function countEligibleRemainingWithinRadius(r){
+        return pool.reduce((acc, x) => {
+          const key = String(x.did || '');
+          if (!key || shownIds.has(key)) return acc;
+          if (x.dist <= r) acc += 1;
+          return acc;
+        }, 0);
+      }
+
+      function updateUI(){
+        pool = buildPoolFromVisible();
+
+        const totalFiltered = estimateTotalFiltered();
+        const showing = 1 + shown;
+        if (pill) pill.textContent = `Showing ${showing} of ${totalFiltered}`;
+
+        if (hintText){
+          hintText.textContent = `Nearest cars are based on your current filters. Choose a radius and reveal cars on the map.`;
+        }
+
+        const r = getRadiusMiles();
+        const label = labelForRadius(r);
+
+        const moreRemaining = parseMoreCount();
+        const eligibleRemaining = countEligibleRemainingWithinRadius(r);
+
+        if (withinBtn){
+          if (moreRemaining > 0){
+            withinBtn.disabled = false;
+            withinBtn.textContent = `Show within ${label}`;
+          } else {
+            if (eligibleRemaining === 0){
+              withinBtn.disabled = true;
+              withinBtn.textContent = `No more within ${label}`;
+            } else {
+              withinBtn.disabled = false;
+              withinBtn.textContent = `Show within ${label} (${eligibleRemaining} left)`;
+            }
+          }
+        }
+      }
+
+      function buildPopupHtml(item, totalAtSpot){
+        const d = item.d;
+
+        const year  = clean(pick(d, ['year']));
+        const make  = clean(pick(d, ['make']));
+        const model = clean(pick(d, ['model']));
+        const title = clean([year, make, model].filter(Boolean).join(' ')) || 'Vehicle';
+
+        const price = moneyGBP(pick(d,['price_gbp','price']));
+        const miles = milesText(d);
+
+        const dealer = clean(pick(d, ['dealer_name','dealer']) || '');
+        const img = coverUrl(d);
+
+        const dist = (typeof item.dist === 'number' && isFinite(item.dist)) ? `${item.dist.toFixed(1)} mi` : '';
+
+        const showNav = totalAtSpot > 1;
+
+        return `
+          <div class="tc-pop" data-tc-pop>
+            <div class="tc-popImgWrap">
+              <img class="tc-popImgTop" src="${img || ''}" alt="" onerror="this.style.display='none'">
+              ${showNav ? `
+                <button type="button" class="tc-imgNavBtn tc-imgPrev" data-tc-prev aria-label="Previous">‹</button>
+                <button type="button" class="tc-imgNavBtn tc-imgNext" data-tc-next aria-label="Next">›</button>
+              ` : ``}
+            </div>
+
+            <div class="tc-popBody">
+              <div class="tc-popTitle">${title}</div>
+
+              <div class="tc-popMetaLine">
+                ${price}${miles ? ` • ${miles}` : ``}
+              </div>
+
+              ${(dealer || dist) ? `
+                <div class="tc-popDealerLine">
+                  ${dealer ? `<span>${dealer}</span>` : ``}
+                  ${(dealer && dist) ? `<span class="tc-dot">•</span>` : ``}
+                  ${dist ? `<span>${dist} away</span>` : ``}
+                </div>
+              ` : ``}
+
+              ${item.did ? `
+                <button class="tc-popCta" type="button" data-tcdm-open="${item.did}">
+                  View details
+                </button>
+              ` : ``}
+            </div>
+          </div>
+        `;
+      }
+
+      function panPinIntoSafeZone(lng, lat){
+        try{
+          map.resize();
+          const mapEl = map.getContainer();
+          const rect = mapEl.getBoundingClientRect();
+
+          const SAFE_TOP    = rect.top + 160;
+          const SAFE_BOTTOM = rect.bottom - 210;
+
+          const pt = map.project([lng, lat]);
+          const pinY = rect.top + pt.y;
+
+          let dy = 0;
+          if (pinY < SAFE_TOP) dy = SAFE_TOP - pinY;
+          else if (pinY > SAFE_BOTTOM) dy = SAFE_BOTTOM - pinY;
+
+          if (dy !== 0){
+            map.panBy([0, -dy], { duration: 260 });
+          }
+        }catch(_){}
+      }
+
+      function addGroupedMarker(groupItems, opts){
+        const first = groupItems[0];
+        const lat = first.lat, lng = first.lng;
+
+        const outer = document.createElement('div');
+
+        const pin = document.createElement('div');
+        pin.className = 'tc-pin' + (opts?.current ? ' is-current' : '');
+
+        if (groupItems.length > 1){
+          const b = document.createElement('div');
+          b.className = 'tc-pinCount';
+          b.textContent = String(groupItems.length);
+          pin.appendChild(b);
+        }
+
+        const tip = document.createElement('div');
+        tip.className = 'tc-pinTip';
+        const dealer = clean(pick(first.d, ['dealer_name','dealer']) || '');
+        tip.textContent = opts?.current ? 'This car' : (dealer || 'Dealer');
+        pin.appendChild(tip);
+
+        outer.appendChild(pin);
+
+        let idx = 0;
+        const popup = new mapboxgl.Popup({
+          offset: 18,
+          closeButton: true,
+          closeOnClick: true,
+          anchor: 'bottom',
+          maxWidth: '320px'
+        });
+
+        function renderPopup(){
+          popup.setHTML(buildPopupHtml(groupItems[idx], groupItems.length));
+          popup.setLngLat([lng, lat]).addTo(map);
+
+          setTimeout(() => {
+            const root = popup.getElement();
+            if (!root) return;
+
+            const prev = root.querySelector('[data-tc-prev]');
+            const next = root.querySelector('[data-tc-next]');
+
+            if (prev){
+              prev.onclick = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                idx = (idx - 1 + groupItems.length) % groupItems.length;
+                renderPopup();
+              };
+            }
+            if (next){
+              next.onclick = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                idx = (idx + 1) % groupItems.length;
+                renderPopup();
+              };
+            }
+
+            panPinIntoSafeZone(lng, lat);
+          }, 0);
+        }
+
+        pin.addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          renderPopup();
+        });
+
+        const marker = new mapboxgl.Marker({ element: outer, anchor: 'center' })
+          .setLngLat([lng, lat])
+          .addTo(map);
+
+        if (opts?.current){
+          try{ outer.style.zIndex = '999999'; }catch(_){}
+        }
+
+        createdMarkers.push(marker);
+        return marker;
+      }
+
+      function buildCurrentGroup(){
+        try{
+          const curLat = parseFloat(current.lat);
+          const curLng = parseFloat(current.lng);
+          if (!Number.isFinite(curLat) || !Number.isFinite(curLng)) return null;
+
+          const curKey = groupKey(curLat, curLng);
+
+          const base = {
+            d: current,
+            lat: curLat,
+            lng: curLng,
+            dist: 0,
+            did: clean(pick(current, ['id','vehicle_id','vehicleId'])) || ''
+          };
+
+          const visibleIds = getVisibleVehicleIds();
+          const group = [base];
+
+          for (const id of visibleIds){
+            const d = byId.get(String(id));
+            if (!d) continue;
+
+            const did = clean(pick(d, ['id','vehicle_id','vehicleId']));
+            if (!did) continue;
+            if (base.did && String(did) === String(base.did)) continue;
+
+            const lat = parseFloat(String(pick(d, ['lat','latitude','dealer_lat','location_lat','vehicle_lat']) || ''));
+            const lng = parseFloat(String(pick(d, ['lng','lon','long','longitude','dealer_lng','dealer_lon','vehicle_lng','vehicle_lon']) || ''));
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+            if (groupKey(lat, lng) !== curKey) continue;
+
+            const dist = haversineMiles(curLat, curLng, lat, lng);
+            group.push({ d, lat, lng, dist, did });
+          }
+
+          group.slice(1).sort((a,b) => (a.dist||0) - (b.dist||0));
+          return group;
+        }catch(_){ return null; }
+      }
+
+      async function ensureMoreLoadedIfNeeded(){
+        const r = getRadiusMiles();
+        let moreRemaining = parseMoreCount();
+        if (!moreRemaining) return;
+
+        for (let attempt=0; attempt<8; attempt++){
+          pool = buildPoolFromVisible();
+          const eligible = countEligibleRemainingWithinRadius(r);
+          moreRemaining = parseMoreCount();
+
+          if (!moreRemaining) break;
+          if (eligible >= PAGE) break;
+
+          const prevCards = document.querySelectorAll('.as-card').length;
+          const clicked = clickMoreOnce();
+          if (!clicked) break;
+          await waitForCardChange(prevCards);
+        }
+
+        pool = buildPoolFromVisible();
+      }
+
+      function addWithinRadius(){
+        const r = getRadiusMiles();
+        const slice = [];
+
+        for (const x of pool){
+          const key = String(x.did || '');
+          if (!key || shownIds.has(key)) continue;
+          if (x.dist > r) break;
+          slice.push(x);
+          if (slice.length >= PAGE) break;
+        }
+        if (!slice.length) return false;
+
+        const groups = new Map();
+        for (const x of slice){
+          shownIds.add(String(x.did || ''));
+          shown += 1;
+          bounds.extend([x.lng, x.lat]);
+
+          const k = groupKey(x.lat, x.lng);
+          if (!groups.has(k)) groups.set(k, []);
+          groups.get(k).push(x);
+        }
+
+        for (const [, arr] of groups) addGroupedMarker(arr);
+
+        try{
+          map.resize();
+
+          const padding = { top: 160, bottom: 210, left: 70, right: 70 };
+
+          const cam = map.cameraForBounds(bounds, { padding, maxZoom: 12.75 });
+          if (cam){
+            const MIN_ZOOM = 5.9;
+            const z = Math.max(cam.zoom, MIN_ZOOM);
+
+            map.easeTo({
+              center: cam.center,
+              zoom: z,
+              bearing: map.getBearing(),
+              pitch: map.getPitch(),
+              duration: 450
+            });
+          } else {
+            map.fitBounds(bounds, { padding, maxZoom: 12.75, duration: 450 });
+          }
+        }catch(_){}
+
+        return true;
+      }
+
+      setRadiusLabel();
+      radiusInput.oninput = () => { setRadiusLabel(); updateUI(); };
+
+      clearCreatedMarkers();
+
+      const curGroup = buildCurrentGroup();
+      if (curGroup && curGroup.length >= 1){
+        addGroupedMarker(curGroup, { current:true });
+      }
+
+      updateUI();
+
+      withinBtn.onclick = async (e) => {
+        e.preventDefault(); e.stopPropagation();
+
+        withinBtn.disabled = true;
+        const r = getRadiusMiles();
+        withinBtn.textContent = `Loading…`;
+
+        await ensureMoreLoadedIfNeeded();
+
+        const ok = addWithinRadius();
+        updateUI();
+
+        if (!ok){
+          withinBtn.disabled = true;
+          withinBtn.textContent = `No more within ${labelForRadius(r)}`;
+        } else {
+          try { map.resize(); } catch(_){}
+        }
+      };
+
+    }catch(_){}
+  };
+
+  console.log('✅ popup-map-aid.js loaded (GitHub)');
+})();

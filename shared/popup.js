@@ -1,3 +1,4 @@
+console.log("✅ popup.js loaded (GitHub)");
 /* =========================================================
    TICARY — Popup Module (bundle-safe, token-safe)
    - waits for DOM + avoids hardcoded Mapbox token

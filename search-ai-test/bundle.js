@@ -2638,3 +2638,251 @@ window.__ticaryApply = function () {
     }
   });
 })();
+
+(function() {
+  if (window.__ticaryPartC) return;
+  window.__ticaryPartC = true;
+
+  // ✅ Disable the main-page map entirely (we're moving map usage into the vehicle popup)
+  // Only allow the standalone map embed mode: ?embed=map
+  const __tcParams = new URLSearchParams(location.search);
+  const __tcIsEmbedMap = (__tcParams.get('embed') || '').toLowerCase() === 'map';
+  if (!__tcIsEmbedMap) return;
+
+    // Inline map toggle button styles
+  (function(){
+    const css = `
+      #as-map-inline-toggle{
+  position:absolute;
+  top:14px;
+  left:14px;
+  z-index:5;
+  padding:10px 18px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.25);
+  background:rgba(15,20,24,0.9);
+  color:#e8f0f5;
+  font-size:0.9rem;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,0.4);
+  backdrop-filter:blur(4px);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+      #as-map-inline-toggle:hover{
+        border-color:rgba(255,255,255,0.45);
+        background:rgba(20,26,32,0.95);
+      }
+      #as-map-inline-toggle:active{
+        transform:translateY(1px);
+      }
+      #as-map-inline-toggle::before{
+        content:'⇤';
+        font-size:0.8rem;
+        opacity:0.8;
+      }
+    `;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  })();
+    // Inline styles for "click to interact" map overlay
+  (function(){
+    const css = `
+      #as-map-blocker{
+        position:absolute;
+        inset:0;
+        z-index:5;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:none;
+        padding:0;
+        /* more transparent so the map shows through */
+        background:linear-gradient(
+          to bottom,
+          rgba(15,23,42,0.40),
+          rgba(15,23,42,0.60)
+        );
+        color:#e5f0ff;
+        font-size:12px;
+        letter-spacing:0.08em;
+        text-transform:uppercase;
+        cursor:pointer;
+        backdrop-filter:blur(2px);
+      }
+      #as-map-blocker span{
+        padding:7px 14px;
+        border-radius:999px;
+        border:1px solid rgba(148,163,184,0.6);
+        /* slightly see-through pill as well */
+        background:rgba(15,23,42,0.85);
+      }
+      :root[data-theme="light"] #as-map-blocker{
+        background:linear-gradient(
+          to bottom,
+          rgba(243,244,246,0.35),
+          rgba(243,244,246,0.55)
+        );
+        color:#111827;
+      }
+      :root[data-theme="light"] #as-map-blocker span{
+        background:rgba(255,255,255,0.90);
+        border-color:rgba(148,163,184,0.7);
+      }
+    `;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  })();
+
+
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiaGF6d2FyLWQiLCJhIjoiY21mMmxncXhzMXJ5aTJqcXl0NjR3MHhvbSJ9.LxklMmgRSbTmC6NG2JrXQQ';
+  const UK_CENTER = [-1.8, 53.7];
+  const FAV_KEY = 'as:favs';
+
+  // Defer heavy marker work until the user actually interacts with the map
+  window.__ticaryMapReadyForPins = window.__ticaryMapReadyForPins || false;
+  window.__ticaryLatestMapPayload = window.__ticaryLatestMapPayload || null;
+
+  const $ = (s, r = document) => r.querySelector(s);
+
+
+  function waitForReady(callback, tries = 0) {
+    if (window.__ticaryItems && window.__ticaryApply) callback();
+    else if (tries < 100) setTimeout(() => waitForReady(callback, tries + 1), 50);
+    else console.error('❌ Part B not loaded');
+  }
+
+  waitForReady(() => {
+    const items = window.__ticaryItems;
+    const favIDs = window.__ticaryFavIDs;
+    const saveFavs = window.__ticarySaveFavs;
+
+        let mapWrap = $('.as-mapwrap');
+    if (!mapWrap) {
+      mapWrap = document.createElement('div');
+      mapWrap.className = 'as-mapwrap';
+      const mapEl = document.createElement('div');
+      mapEl.id = 'as-map';
+      mapWrap.appendChild(mapEl);
+      const toolbar = $('.as-listbar-new');
+      if (toolbar?.parentElement) toolbar.parentElement.insertBefore(mapWrap, toolbar);
+    }
+
+    // Mobile-only panel, but ONLY on the standalone map embed (?embed=map)
+    const params      = new URLSearchParams(location.search);
+    const isEmbedMap  = (params.get('embed') || '').toLowerCase() === 'map';
+    const IS_MOBILE   = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+    let mobilePanel = null;
+    if (IS_MOBILE && isEmbedMap && mapWrap && mapWrap.parentElement) {
+      document.body.classList.add('as-map-embed');
+
+      mobilePanel = document.getElementById('as-map-mobile-panel');
+      if (!mobilePanel) {
+        mobilePanel = document.createElement('div');
+        mobilePanel.id = 'as-map-mobile-panel';
+        mobilePanel.className = 'as-map-mobile-panel';
+        mapWrap.parentElement.insertBefore(mobilePanel, mapWrap.nextSibling);
+      }
+    }
+
+
+
+        if (!window.mapboxgl) { console.error('❌ Mapbox GL not loaded'); return; }
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const map = new mapboxgl.Map({
+      container: 'as-map',
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: UK_CENTER,
+      zoom: 5.5,
+      renderWorldCopies: false
+    });
+
+    // Very loose UK-ish bounds so you can see full UK easily
+    const UK_BOUNDS = [
+      [-20.0, 45.0],  // SW – way out into the Atlantic, a bit below Cornwall
+      [ 10.0, 65.0]   // NE – above Scotland and to the right
+    ];
+
+    map.setMaxBounds(UK_BOUNDS);
+    // ❌ no minZoom – allow zooming out as far as Mapbox wants
+    // map.setMinZoom(...) removed on purpose
+    map.setMaxZoom(17);
+
+    // --- Map lock: start non-interactive until user clicks overlay ---
+    try {
+      map.scrollZoom.disable();
+      map.boxZoom.disable();
+      map.dragPan.disable();
+      map.keyboard.disable();
+      map.doubleClickZoom.disable();
+      map.touchZoomRotate.disable();
+    } catch (err) {
+      console.warn('Map interaction disable failed', err);
+    }
+
+    const mapContainer = document.getElementById('as-map');
+    if (mapContainer) {
+      // Ensure positioned so the blocker can sit on top
+      if (getComputedStyle(mapContainer).position === 'static') {
+        mapContainer.style.position = 'relative';
+      }
+
+      const blocker = document.createElement('button');
+      blocker.id = 'as-map-blocker';
+      blocker.type = 'button';
+      blocker.setAttribute('aria-label', 'Click to interact with map');
+      blocker.innerHTML = '<span>Click to interact with map</span>';
+
+      mapContainer.appendChild(blocker);
+
+      function enableMapInteraction() {
+        try {
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragPan.enable();
+          map.keyboard.enable();
+          map.doubleClickZoom.enable();
+          map.touchZoomRotate.enable();
+        } catch (err) {
+          console.warn('Map interaction enable failed', err);
+        }
+                window.__ticaryMapReadyForPins = true;
+        if (window.__ticaryLatestMapPayload) {
+          try {
+            updateMap(window.__ticaryLatestMapPayload, true);
+          } catch (e) {
+            console.warn('Map update on enable failed', e);
+          }
+        }
+
+        if (blocker && blocker.parentElement) {
+          blocker.parentElement.removeChild(blocker);
+        }
+      }
+
+      blocker.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        enableMapInteraction();
+      });
+    }
+    // --- End map lock ---
+
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    window.map = map;
+
+
+
+        let markers = [];
+    let activePopupData = null;
+
+    /* ... REST OF YOUR ORIGINAL PART C CODE CONTINUES UNCHANGED ... */
+    /* NOTE: keep everything below exactly as your existing embed has it. */
+
+  });
+})();

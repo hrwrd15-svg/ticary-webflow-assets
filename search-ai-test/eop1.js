@@ -1,5 +1,3 @@
-<!-- TICARY — END OF PAGE 1 (FULL REPLACEMENT) -->
-<script>
 (function(){
   // =========================
   // CONFIG
@@ -365,10 +363,4 @@ window.__ticaryCars = Array.isArray(cars)
     boot(0);
   }
 })();
-</script>
 
-<style>
-/* keep your finance styling (safe to include here too) */
-.as-color, .as-finance { font-size: 0.9rem; color: #ccc; margin-top: 2px; }
-.as-finance { color: #3fb1ce; font-weight: 600; }
-</style>

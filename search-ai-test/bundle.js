@@ -1,3 +1,7 @@
+window.__asInit_v5 = true;
+window.__asInit_v6 = true;
+window.__asComplete = true;
+
 (function(){
   // =========================
   // CONFIG
@@ -374,3 +378,5 @@ window.__ticaryCars = Array.isArray(cars)
     boot(0);
   }
 })();
+
+

@@ -1925,3 +1925,572 @@ window.__ticaryApply = function () {
     init();
   }
 })(0);
+
+/* =========================================================
+   TICARY — PART B.1 DATA ENRICHMENT (IMPROVED PARSING)
+========================================================= */
+(function(){
+  const clean = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v).replace(/\u00a0/g,' ').trim();
+    return (!s || s === 'null' || s === 'undefined') ? '' : s;
+  };
+
+  const toNum = (v) => {
+    const s = String(v ?? '').replace(/[^\d.\-]/g,'');
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const splitList = (s) => {
+    s = clean(s);
+    if (!s) return [];
+    // normalise bullets + newlines
+    s = s.replace(/\r/g,'\n')
+         .replace(/[•·●▪■]+/g, '\n')
+         .replace(/\n{2,}/g, '\n');
+
+    // choose best delimiter
+    const delim =
+      s.includes('\n') ? '\n' :
+      s.includes(';')  ? ';'  :
+      s.includes('|')  ? '|'  :
+      s.includes(',')  ? ','  : null;
+
+    const parts = delim ? s.split(delim) : [s];
+    return parts.map(x => clean(x)).filter(Boolean);
+  };
+
+  const toArray = (v) => {
+    if (Array.isArray(v)) return v.map(clean).filter(Boolean);
+
+    if (v && typeof v === 'object') {
+      // handle JSON object like {0:"...",1:"..."} or {items:[...]}
+      if (Array.isArray(v.items)) return v.items.map(clean).filter(Boolean);
+      return Object.values(v).map(clean).filter(Boolean);
+    }
+
+    if (typeof v === 'string') {
+      const s = clean(v);
+      if (!s) return [];
+
+      // try JSON
+      if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
+        try {
+          const j = JSON.parse(s);
+          if (Array.isArray(j)) return j.map(clean).filter(Boolean);
+          if (j && typeof j === 'object') return Object.values(j).map(clean).filter(Boolean);
+        } catch {}
+      }
+
+      return splitList(s);
+    }
+
+    return [];
+  };
+
+  function enrich(){
+    const items = window.__ticaryItems;
+    if (!Array.isArray(items)) return;
+
+    for (const o of items){
+      const c = o.car || {};
+      const d = o.data || (o.data = {});
+
+      // carry-over specs
+      if (d.power == null) d.power = toNum(c.power_ps ?? c.power);
+      if (d.doors == null) d.doors = toNum(c.doors);
+      if (!clean(d.drivetrain)) d.drivetrain = clean(c.drivetrain);
+      if (!clean(d.euro)) d.euro = clean(c.euro_standard ?? c.euro);
+
+      // address + seller
+      if (!clean(d.reg)) d.reg = clean(c.vehicle_registration_mark ?? c.reg);
+      if (d.owners == null) d.owners = toNum(c.num_owners);
+      if (!clean(d.street)) d.street = clean(c.street);
+      if (!clean(d.city)) d.city = clean(c.city);
+      if (!clean(d.county)) d.county = clean(c.county);
+      if (!clean(d.postal_code)) d.postal_code = clean(c.postal_code);
+      if (!clean(d.phone)) d.phone = clean(c.seller_phone ?? c.phone);
+      if (!clean(d.email)) d.email = clean(c.seller_email ?? c.email);
+
+      // rich text fields (robust parsing)
+      const feats = toArray(c.features);
+      const opts  = toArray(c.options);
+      if (!Array.isArray(d.features) || d.features.length === 0) d.features = feats;
+      if (!Array.isArray(d.options)  || d.options.length === 0)  d.options  = opts;
+      if (!clean(d.seller_comments)) d.seller_comments = clean(c.seller_comments);
+
+      // performance
+      if (d.maxspeed_mph == null) d.maxspeed_mph = toNum(c.performance_maxspeed_mph);
+      if (d.zero_to_60_mph == null) d.zero_to_60_mph = toNum(c.performance_acceleration_zero_to_60_mph);
+      if (d.combined_mpg == null) d.combined_mpg = toNum(c.efficiency_combined_mpg);
+    }
+
+    window.__ticaryDataEnriched = true;
+    console.log('✅ Part B.1 enriched + parsed');
+  }
+
+  if (window.__ticaryPartBLoaded) enrich();
+  else window.addEventListener('ticary:partb:loaded', enrich, { once: true });
+})();
+</script>
+
+<!-- TICARY PART D — Facet option counts for ALL filters (Autotrader style) -->
+<script>
+(function TicaryFacetCounts(){
+  if (window.__ticaryFacetCountsLoaded) return;
+  window.__ticaryFacetCountsLoaded = true;
+
+  const num = (t) => {
+    const n = String(t ?? '').replace(/[^0-9.\-]/g, '');
+    return n ? Number(n) : NaN;
+  };
+
+  // --- Variant matching (mirrors Part B behaviour) ---
+  function normaliseVariantText(str) {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function matchesVariantQuery(editionRaw, queryRaw) {
+    if (!editionRaw || !queryRaw) return false;
+    const edition = normaliseVariantText(editionRaw);
+    const query   = normaliseVariantText(queryRaw);
+    if (!edition || !query) return false;
+    if (edition.includes(query)) return true;
+    const words  = edition.split(' ');
+    const tokens = query.split(' ');
+    return tokens.every(tok => !tok || words.includes(tok));
+  }
+
+  // --- Distance helper (mirrors Part B behaviour) ---
+  function distMiles(a, b) {
+    if (!a || !b || !isFinite(a.lat) || !isFinite(b.lat)) return NaN;
+    const R = 3958.7613, toR = d => d * Math.PI / 180;
+    const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+    const s = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+
+  // Keys that represent filter fields in your state
+  const FILTER_KEYS = [
+    'make','model','trim','fuel','gearbox','bodytype','colour',
+    'engineMin','engineMax',
+    'priceMin','priceMax','financeMin','financeMax',
+    'yearMin','yearMax','mileageMax','distance','origin'
+  ];
+
+  // Read current state safely
+  function getState(){
+    return window.__ticaryState || window.state || null;
+  }
+  function getItems(){
+    return Array.isArray(window.__ticaryItems) ? window.__ticaryItems : [];
+  }
+
+  // Core filter test (same logic as Part B, but standalone)
+  function passesFilters(data, filters){
+    const f = filters || {};
+
+    if (f.make && data.make !== f.make) return false;
+    if (f.model && data.model !== f.model) return false;
+
+    if (f.trim) {
+      const ed = data.edition || data.trim || '';
+      if (!matchesVariantQuery(ed, f.trim)) return false;
+    }
+
+    if (f.fuel && data.fuel !== f.fuel) return false;
+    if (f.gearbox && data.gearbox !== f.gearbox) return false;
+    if (f.bodytype && data.bodytype !== f.bodytype) return false;
+
+    if (f.colour) {
+      const carColour = String(data.color || '').trim().toLowerCase();
+      if (!carColour || carColour !== String(f.colour).trim().toLowerCase()) return false;
+    }
+
+    // Engine
+    if (f.engineMin !== '' || f.engineMax !== '') {
+      const engVal = num(data.engine);
+      if (!isFinite(engVal)) return false;
+      if (f.engineMin !== '' && engVal < f.engineMin) return false;
+      if (f.engineMax !== '' && engVal > f.engineMax) return false;
+    }
+
+    // Price
+    if (f.priceMin !== '' && (!isFinite(data.price) || data.price < f.priceMin)) return false;
+    if (f.priceMax !== '' && (!isFinite(data.price) || data.price > f.priceMax)) return false;
+
+    // Finance range: Part B excludes cars without finance when a finance filter is set
+    if (f.financeMin !== '' || f.financeMax !== '') {
+      const fin = num(data.finance);
+      if (!isFinite(fin) || fin <= 0) return false;
+      if (f.financeMin !== '' && fin < f.financeMin) return false;
+      if (f.financeMax !== '' && fin > f.financeMax) return false;
+    }
+
+    // Year
+    if (f.yearMin !== '' && (!isFinite(data.year) || data.year < f.yearMin)) return false;
+    if (f.yearMax !== '' && (!isFinite(data.year) || data.year > f.yearMax)) return false;
+
+    // Mileage
+    if (f.mileageMax !== '' && (!isFinite(data.mileage) || data.mileage > f.mileageMax)) return false;
+
+    // Distance
+    if (f.distance && f.origin) {
+      const dm = distMiles({ lat: data.lat, lng: data.lng }, f.origin);
+      if (!isFinite(dm) || dm > f.distance) return false;
+    }
+
+    return true;
+  }
+
+  // Build a filter object like current state, but allow overrides
+  function cloneFilters(filters){
+    const out = {};
+    FILTER_KEYS.forEach(k => out[k] = (filters && k in filters) ? filters[k] : '');
+    return out;
+  }
+
+  // Eligible set for a facet = cars that pass all current filters EXCEPT that facet
+  function buildEligible(excludeKeys){
+    const st = getState();
+    const items = getItems();
+    if (!st || !st.filters) return [];
+    const base = cloneFilters(st.filters);
+
+    // remove excluded keys (treat as unset)
+    (excludeKeys || []).forEach(k => {
+      if (k === 'origin') base.origin = st.filters.origin; // keep origin unless explicitly excluding it
+      else base[k] = '';
+    });
+
+    const eligible = [];
+    for (let i=0;i<items.length;i++){
+      const d = items[i]?.data;
+      if (d && passesFilters(d, base)) eligible.push(d);
+    }
+    return eligible;
+  }
+
+  // Helpers: keep original option labels
+  function stashOptionLabel(opt){
+    if (!opt) return '';
+    if (!opt.dataset) opt.dataset = {};
+    if (!opt.dataset.baseLabel) opt.dataset.baseLabel = opt.textContent;
+    return opt.dataset.baseLabel;
+  }
+
+  function setOptionTextWithCount(opt, count){
+  const base = stashOptionLabel(opt).replace(/\s*\(\d+\)\s*$/,'').trim();
+
+  // Always keep placeholder / empty option visible
+  if (!opt.value || opt.disabled) {
+    opt.hidden = false;
+    opt.textContent = base;
+    return;
+  }
+
+  const st = getState();
+  const isSelected = st && st.filters && String(st.filters[opt.parentElement?.id?.replace('asf-','')]) === String(opt.value);
+
+  // Hide zero-count options unless currently selected
+  if (!isSelected && Number(count) === 0) {
+    opt.hidden = true;
+    return;
+  }
+
+  opt.hidden = false;
+  opt.textContent = `${base} (${count})`;
+}
+
+
+  // Count maps for discrete facets
+  function freqMap(list, getter){
+    const m = new Map();
+    for (let i=0;i<list.length;i++){
+      const v = getter(list[i]);
+      if (!v) continue;
+      m.set(v, (m.get(v) || 0) + 1);
+    }
+    return m;
+  }
+
+  // Numeric facet counts: check each option’s implied constraint
+  function countForNumericOptions(list, testerFn){
+    // returns count of items passing testerFn(d)
+    let c = 0;
+    for (let i=0;i<list.length;i++){
+      if (testerFn(list[i])) c++;
+    }
+    return c;
+  }
+
+  // Main update: compute and paint counts
+  function updateAllCounts(){
+    const st = getState();
+    if (!st || !st.filters) return;
+
+    const scope = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
+    const selMake      = scope.querySelector('#asf-make');
+    const selModel     = scope.querySelector('#asf-model');
+    const selFuel      = scope.querySelector('#asf-fuel');
+    const selGear      = scope.querySelector('#asf-gear');
+    const selBody      = scope.querySelector('#asf-bodytype');
+    const selColour    = scope.querySelector('#asf-colour');
+    const selEngMin    = scope.querySelector('#asf-engine-min');
+    const selEngMax    = scope.querySelector('#asf-engine-max');
+    const selPriceMin  = scope.querySelector('#asf-price-min');
+    const selPriceMax  = scope.querySelector('#asf-price-max');
+    const selFinMin    = scope.querySelector('#asf-fin-min');
+    const selFinMax    = scope.querySelector('#asf-fin-max');
+    const selMilesMax  = scope.querySelector('#asf-mileage-max');
+
+    // --- MAKE ---
+    if (selMake) {
+      const eligible = buildEligible(['make','model','trim']); // make affects model/trim
+      const map = freqMap(eligible, d => d.make);
+      [...selMake.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- MODEL (counts reflect current make selection, but show "if I pick this model next") ---
+    if (selModel && !selModel.disabled) {
+      const eligible = buildEligible(['model','trim']); // keep make in place, remove model/trim
+      const map = freqMap(eligible, d => d.model);
+      [...selModel.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- FUEL ---
+    if (selFuel) {
+      const eligible = buildEligible(['fuel']);
+      const map = freqMap(eligible, d => d.fuel);
+      [...selFuel.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- GEARBOX ---
+    if (selGear) {
+      const eligible = buildEligible(['gearbox']);
+      const map = freqMap(eligible, d => d.gearbox);
+      [...selGear.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- BODY TYPE ---
+    if (selBody) {
+      const eligible = buildEligible(['bodytype']);
+      const map = freqMap(eligible, d => d.bodytype);
+      [...selBody.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- COLOUR ---
+    if (selColour) {
+      const eligible = buildEligible(['colour']);
+      const map = freqMap(eligible, d => (d.color || '').trim());
+      [...selColour.options].forEach(opt => setOptionTextWithCount(opt, map.get(opt.value) || 0));
+    }
+
+    // --- ENGINE MIN / MAX ---
+    // For each min option: count cars passing everything except engineMin, but with engine >= thatMin and <= current engineMax (if set)
+    if (selEngMin) {
+      const eligible = buildEligible(['engineMin']); // keep engineMax in place
+      const currentMax = (st.filters.engineMax !== '' ? num(st.filters.engineMax) : NaN);
+
+      [...selEngMin.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+
+        const vMin = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const e = num(d.engine);
+          if (!isFinite(e)) return false;
+          if (isFinite(vMin) && e < vMin) return false;
+          if (isFinite(currentMax) && e > currentMax) return false;
+          return true;
+        });
+
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    if (selEngMax) {
+      const eligible = buildEligible(['engineMax']); // keep engineMin in place
+      const currentMin = (st.filters.engineMin !== '' ? num(st.filters.engineMin) : NaN);
+
+      [...selEngMax.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+
+        const vMax = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const e = num(d.engine);
+          if (!isFinite(e)) return false;
+          if (isFinite(currentMin) && e < currentMin) return false;
+          if (isFinite(vMax) && e > vMax) return false;
+          return true;
+        });
+
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    // --- PRICE MIN / MAX ---
+    if (selPriceMin) {
+      const eligible = buildEligible(['priceMin']); // keep priceMax in place
+      const currentMax = (st.filters.priceMax !== '' ? num(st.filters.priceMax) : NaN);
+
+      [...selPriceMin.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+        const pMin = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const p = num(d.price);
+          if (!isFinite(p)) return false;
+          if (isFinite(pMin) && p < pMin) return false;
+          if (isFinite(currentMax) && p > currentMax) return false;
+          return true;
+        });
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    if (selPriceMax) {
+      const eligible = buildEligible(['priceMax']); // keep priceMin in place
+      const currentMin = (st.filters.priceMin !== '' ? num(st.filters.priceMin) : NaN);
+
+      [...selPriceMax.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+        const pMax = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const p = num(d.price);
+          if (!isFinite(p)) return false;
+          if (isFinite(currentMin) && p < currentMin) return false;
+          if (isFinite(pMax) && p > pMax) return false;
+          return true;
+        });
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    // --- FINANCE MIN / MAX ---
+    // Mirrors Part B rule: if finance filters are used, only cars with finance > 0 are eligible
+    if (selFinMin) {
+      const eligible = buildEligible(['financeMin']); // keep financeMax in place
+      const currentMax = (st.filters.financeMax !== '' ? num(st.filters.financeMax) : NaN);
+
+      [...selFinMin.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+        const fMin = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const f = num(d.finance);
+          if (!isFinite(f) || f <= 0) return false;
+          if (isFinite(fMin) && f < fMin) return false;
+          if (isFinite(currentMax) && f > currentMax) return false;
+          return true;
+        });
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    if (selFinMax) {
+      const eligible = buildEligible(['financeMax']); // keep financeMin in place
+      const currentMin = (st.filters.financeMin !== '' ? num(st.filters.financeMin) : NaN);
+
+      [...selFinMax.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+        const fMax = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const f = num(d.finance);
+          if (!isFinite(f) || f <= 0) return false;
+          if (isFinite(currentMin) && f < currentMin) return false;
+          if (isFinite(fMax) && f > fMax) return false;
+          return true;
+        });
+        setOptionTextWithCount(opt, count);
+      });
+    }
+
+    // --- MILEAGE MAX ---
+    if (selMilesMax) {
+      const eligible = buildEligible(['mileageMax']);
+      [...selMilesMax.options].forEach(opt => {
+        if (!opt.value || opt.disabled) return setOptionTextWithCount(opt, 0);
+        const mMax = num(opt.value);
+        const count = countForNumericOptions(eligible, d => {
+          const m = num(d.mileage);
+          if (!isFinite(m)) return false;
+          if (isFinite(mMax) && m > mMax) return false;
+          return true;
+        });
+        setOptionTextWithCount(opt, count);
+      });
+    }
+  }
+
+  // Debounced refresh
+  let t = null;
+  function requestUpdate(){
+    clearTimeout(t);
+    t = setTimeout(() => {
+      try { updateAllCounts(); } catch(e){ console.warn('Facet counts error:', e); }
+    }, 120);
+  }
+
+  // Hook into Part B lifecycle: after apply() runs, update counts
+  function hookApply(){
+    // If Part B exposes __ticaryApply, wrap it once
+    if (typeof window.__ticaryApply === 'function' && !window.__ticaryApply.__countsWrapped) {
+      const orig = window.__ticaryApply;
+      function wrapped(){
+        const r = orig.apply(this, arguments);
+        requestUpdate();
+        return r;
+      }
+      wrapped.__countsWrapped = true;
+      window.__ticaryApply = wrapped;
+    }
+  }
+
+  // Add listeners to filter controls (so counts refresh even before apply, but will settle after apply too)
+  function bindUI(){
+    const host = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
+    const ids = [
+      '#asf-make','#asf-model','#asf-trim','#asf-engine-min','#asf-engine-max',
+      '#asf-fuel','#asf-gear','#asf-bodytype','#asf-colour',
+      '#asf-price-min','#asf-price-max','#asf-fin-min','#asf-fin-max','#asf-mileage-max',
+      '#asf-year-min','#asf-year-max'
+    ];
+    ids.forEach(sel => {
+      const el = host.querySelector(sel);
+      if (!el || el.__countsBound) return;
+      el.__countsBound = true;
+      el.addEventListener('change', requestUpdate);
+      el.addEventListener('input', requestUpdate);
+    });
+  }
+
+  // Boot loop: wait until Part B dataset/state exist
+  (function boot(tries){
+    tries = tries || 0;
+
+    if (!Array.isArray(window.__ticaryItems) || !window.__ticaryItems.length) {
+      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
+      return;
+    }  
+    if (!(window.__ticaryState || window.state) || !(getState()?.filters)) {
+      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
+      return;
+    }
+
+    hookApply();
+    bindUI();
+    requestUpdate();
+
+    // Also re-bind occasionally (filters UI may rebuild)
+    setInterval(() => {
+      hookApply();
+      bindUI();
+    }, 1500);
+
+  })(0);
+
+})();

@@ -379,4 +379,116 @@ window.__ticaryCars = Array.isArray(cars)
   }
 })();
 
+// Facet option renderer (kept separate to avoid Webflow 50k embed limit)
+  window.setFacetOptions = function(selectEl, facetArr, selectedValue, total, emptyLabel){
+    if (!selectEl) return;
+
+    selectEl.innerHTML = '';
+    selectEl.appendChild(new Option(emptyLabel || 'Any', ''));
+
+    (facetArr || []).forEach(row => {
+      const v = row.value;
+      if (!v) return;
+
+      const n = Number(row.count || 0);
+
+      // If option is currently selected, show CURRENT TOTAL
+      const labelCount = (selectedValue && v === selectedValue) ? Number(total || 0) : n;
+
+      selectEl.appendChild(
+        new Option(`${v} (${labelCount.toLocaleString('en-GB')})`, v)
+      );
+    });
+  };
+
+(function () {
+  if (document.getElementById('tc-ai-search-top')) return;
+  const wrapper = document.getElementById('as-filters');
+  if (!wrapper) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'tc-ai-search-top';
+  wrap.className = 'tc-aiTopWrap';
+
+  /* Blob+spark layer: sibling to button, all animation lives here */
+  const blobLayer = document.createElement('div');
+  blobLayer.className = 'tc-aiBlobLayer';
+
+  const btn = document.createElement('a');
+  btn.href = 'https://ticary.co.uk/ai-search';
+  btn.className = 'tc-aiTopBtn';
+  /* btn innerHTML is set once and never touched again */
+  btn.innerHTML = `
+    <span>Try Ticary AI Search</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="7"></circle>
+      <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+    </svg>`;
+
+  wrap.appendChild(blobLayer);
+  wrap.appendChild(btn);
+  wrapper.insertBefore(wrap, wrapper.firstChild);
+
+  /* ── Blobs ── */
+  const blobs = [
+    { color:'rgba(124,58,237,.95)',  size:90,  x:12,  y:50, dur:7200,  dx:38,  dy:14  },
+    { color:'rgba(236,72,153,.9)',   size:80,  x:78,  y:45, dur:9000,  dx:-30, dy:22  },
+    { color:'rgba(99,102,241,.85)',  size:70,  x:48,  y:55, dur:11000, dx:22,  dy:-20 },
+  ];
+
+  blobs.forEach(b => {
+    const el = document.createElement('span');
+    el.className = 'tc-aiBlob';
+    el.style.cssText = `
+      width:${b.size}px;
+      height:${b.size}px;
+      background:radial-gradient(circle at 40% 40%, ${b.color}, transparent 70%);
+      filter:blur(18px);
+      left:${b.x}%;
+      top:50%;
+      transform:translate(-50%,-50%);
+    `;
+    blobLayer.appendChild(el);
+
+    el.animate([
+      { transform:'translate(-50%,-50%) scale(1)' },
+      { transform:`translate(calc(-50% + ${b.dx}px), calc(-50% + ${b.dy}px)) scale(1.15)` },
+      { transform:`translate(calc(-50% - ${b.dx*.5}px), calc(-50% + ${b.dy*.3}px)) scale(.9)` },
+      { transform:'translate(-50%,-50%) scale(1)' },
+    ], { duration:b.dur, iterations:Infinity, easing:'ease-in-out', direction:'alternate' });
+  });
+
+  /* ── Sparks: also go into blobLayer, never into btn ── */
+  const cols = [
+    'rgba(167,139,250,.95)',
+    'rgba(236,72,153,.95)',
+    'rgba(255,255,255,.9)',
+    'rgba(99,102,241,.95)',
+    'rgba(244,114,182,.9)',
+  ];
+
+  function spawnSpark(big) {
+    const s = document.createElement('span');
+    s.className = 'tc-aiSpark';
+    const size = big ? 6 + Math.random()*8 : 3 + Math.random()*5;
+    const dur  = (.55 + Math.random()*.75).toFixed(2);
+    const col  = cols[Math.floor(Math.random()*cols.length)];
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${5 + Math.random()*90}%;
+      top:${10 + Math.random()*80}%;
+      background:${col};
+      box-shadow:0 0 ${size+4}px ${col};
+      --d:${dur}s;
+    `;
+    blobLayer.appendChild(s);
+    setTimeout(() => s.remove(), dur*1000 + 120);
+  }
+
+  setInterval(() => spawnSpark(false), 400);
+  btn.addEventListener('mouseenter', () => {
+    for (let i = 0; i < 10; i++) setTimeout(() => spawnSpark(true), i*50);
+  });
+})();
+
 

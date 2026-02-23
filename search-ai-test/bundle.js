@@ -491,4 +491,1437 @@ window.__ticaryCars = Array.isArray(cars)
   });
 })();
 
+/* Ticary shim: Part B expects `scope` to be a DOM root with querySelector */
+window.scope = window.scope || document;
 
+(function bootPartB(tries) {
+  tries = typeof tries === 'number' ? tries : 0;
+  if (window.__ticaryPartBLoaded) return;
+  window.__ticaryPartB = 'booting';
+  window.addEventListener('error', (e) => {
+  // helps catch silent failures from embeds
+  console.warn('Part B global error:', e?.message || e);
+});
+
+
+  // Style for the bottom Clear all button
+  if (!window.__asfClearStyled) {
+    window.__asfClearStyled = true;
+    const style = document.createElement('style');
+    style.textContent = `
+      .asf-controls .asf-clear-main {
+        background: #3fb1ce !important;
+        color: #ffffff !important;
+        border: none !important;
+        width: 100%;
+        border-radius: 999px;
+        font-weight: 600;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        transition: box-shadow 0.2s ease, transform 0.1s ease;
+      }
+      .asf-controls .asf-clear-main:hover {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); /* red glow */
+        transform: translateY(-1px);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Tighten spacing above "Postcode or address" in Distance box
+  (function(){
+    if (window.__asfDistanceTightened) return;
+    window.__asfDistanceTightened = true;
+    const style = document.createElement('style');
+    style.textContent = `
+      .asf-sec#asf-distance .asf-body > .row:first-of-type {
+        margin-top: -6px;
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  const MAPBOX_TOKEN = 'pk.eyJ1IjoiaGF6d2FyLWQiLCJhIjoiY21mMmxncXhzMXJ5aTJqcXl0NjR3MHhvbSJ9.LxklMmgRSbTmC6NG2JrXQQ';
+  const PAGE_SIZE   = 24;
+  let state = null; // IMPORTANT: avoids "Cannot access 'state' before initialization"
+
+
+  const $  = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const num = (t) => { const n = String(t ?? '').replace(/[^0-9.\-]/g, ''); return n ? Number(n) : NaN; };
+  const uniqueSorted = (a) => {
+  const arr = Array.from(new Set((a || []).filter(v => v !== null && v !== undefined && v !== '')));
+  return arr.sort((x, y) => String(x).localeCompare(String(y), 'en', { numeric: true }));
+};
+
+
+  // Show engine sizes nicely (e.g. 1.0L, 1.5L, 2.0L) but keep raw numeric values
+  const formatEngineLabel = (v) => {
+    const n = num(v);
+    if (!isFinite(n) || n <= 0) return v;
+    const rounded = Math.round(n * 10) / 10;
+    return `${rounded.toFixed(1)}L`;
+  };
+
+  const distMiles = (a, b) => {
+    if (!a || !b || !isFinite(a.lat) || !isFinite(b.lat)) return NaN;
+    const R = 3958.7613, toR = d => d * Math.PI / 180;
+    const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  };
+
+  const getThumb = (card) => {
+    const img = card.querySelector('img.as-thumb');
+    if (img?.src) return img.src;
+    const el = card.querySelector('.as-thumb');
+    if (!el) return '';
+    const s = el.getAttribute('style') || getComputedStyle(el).backgroundImage || '';
+    const m = s.match(/url\(["']?([^"')]+)["']?\)/i);
+    return m ? m[1] : '';
+  };
+
+  // ✅ Always target the cars list ONLY (prevents nuking other Webflow lists)
+const listInner =
+  document.getElementById('vehiclesList') ||
+  document.querySelector('#as-grid .w-dyn-items') ||
+  document.querySelector('#as-grid [role="list"]');
+
+  if (!listInner) {
+    if (tries < 40) {
+      return setTimeout(() => bootPartB(tries + 1), 100);
+    }
+    console.error('❌ No list for Ticary Part B after waiting');
+    return;
+  }
+  window.__ticaryPartB = 'starting';
+  listInner.setAttribute('data-as-grid', '1');
+
+// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
+if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
+  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
+  console.error('❌ window.__ticaryCars never became available');
+  return;
+}
+
+    // ✅ Build from full dataset in memory (NOT from DOM)
+  const rawCars = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
+  const items = rawCars.map((car) => {
+    car = car || {};
+
+    // ✅ Compatibility aliases for older map/popup code (Part C)
+    try {
+      // URL / navigation
+      car.url = car.url || car.listing_url || car.listingUrl || '';
+
+      // Price fields
+      car.price = car.price ?? car.price_gbp ?? car.priceGBP ?? null;
+      car.finance_monthly = car.finance_monthly ?? car.finance_monthly_gbp ?? car.financeMonthly ?? null;
+
+      // Images (pick a sensible “primary”)
+      const cover =
+        car.image_cover_url ||
+        car.image_cover ||
+        car.cover_image_url ||
+        car.cover_url ||
+        car.hero_image_url ||
+        '';
+
+      const imgs =
+        car.images ||
+        car.image_urls ||
+        car.imageUrls ||
+        car.photos ||
+        car.photo_urls ||
+        car.gallery ||
+        car.gallery_urls ||
+        [];
+
+      const firstImg = Array.isArray(imgs) ? (imgs[0] || '') : (imgs || '');
+
+      car.primary_image =
+        car.primary_image ||
+        car.primaryImage ||
+        car.image ||
+        car.image_url ||
+        car.imageUrl ||
+        car.main_image ||
+        car.mainImage ||
+        cover ||
+        firstImg ||
+        '';
+
+      // Also expose “thumb” alias (lots of map popups use this)
+      car.thumb = car.thumb || car.primary_image || car.image_cover_url || cover || firstImg || '';
+    } catch (e) {}
+
+    const lat = num(car.latitude ?? car.lat ?? car.dealer_lat);
+    const lng = num(car.longitude ?? car.lng ?? car.dealer_lng);
+
+    const data = {
+      id: String(car.id ?? '').trim(),
+      make: String(car.make ?? '').trim(),
+      model: String(car.model ?? '').trim(),
+      edition: String((car.variant ?? car.variants ?? car.edition ?? car.trim ?? '')).trim(),
+      fuel: String(car.fuel_type ?? '').trim(),
+      gearbox: String(car.transmission ?? '').trim(),
+      bodytype: String(car.body_type ?? '').trim(),
+      color: String((car.colour ?? car.color ?? '')).trim(),
+      engine: num(car.engine_size_l ?? car.engine_l ?? car.engine_size ?? car.engine),
+      year: num(car.year),
+      mileage: num(car.mileage_mi),
+      price: num(car.price ?? car.price_gbp ?? car.priceGBP),
+      finance: num(car.finance_monthly_gbp ?? car.finance_monthly ?? car.finance),
+      lat, lng,
+      thumb: String(car.thumb || car.primary_image || car.image_cover_url || '').trim(),
+      url: String(car.url || car.listing_url || '').trim(),
+      dealer: String(car.dealer_name ?? car.dealer ?? car.dealerName ?? '').trim()
+      
+    };
+
+    return { car, item: null, card: null, data };
+  });
+
+  // ✅ EXPOSE EARLY 
+window.__ticaryItems = items;
+window.__ticaryApply = function () {
+  try {
+    if (!state) return setTimeout(window.__ticaryApply, 50);
+    apply();
+  } catch (e) {
+    console.error('❌ Part B apply() crashed', e);
+  }
+};
+
+
+
+  // FAVOURITES: keep behaviour, but attach buttons AFTER render
+  const loadFavs = () => { try { return JSON.parse(localStorage.getItem('as:favs') || '[]'); } catch { return []; } };
+  const saveFavs = (ids) => { try { localStorage.setItem('as:favs', JSON.stringify(ids)); } catch {} };
+  let favIDs = new Set(loadFavs());
+
+  // expose for other embeds if needed
+  window.__ticaryFavIDs = favIDs;
+  window.__ticarySaveFavs = saveFavs;
+
+  window.__ticaryEnsureFavButtons = function(scope){
+    try{
+      const cards = (scope || document).querySelectorAll('.as-card');
+      cards.forEach((card) => {
+        if (card.querySelector('.as-fav-btn')) return;
+
+        const url = card.dataset.url || '';
+        const vid = card.dataset.vehicleId || card.dataset.id || '';
+        const id  = url || vid;
+        if (!id) return;
+
+        const btn = document.createElement('button');
+        btn.className = 'as-fav-btn';
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Favourite');
+        btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <path d="M12.1 21.35c-.13 .09-.3 .09-.43 0C7.14 17.77 4 15.03 2.53 12.7 1.4 10.93 1.2 8.9 2.13 7.18 3.03 5.51 4.77 4.5 6.6 4.5c1.54 0 3.02.74 3.9 1.93.88-1.19 2.36-1.93 3.9-1.93 1.83 0 3.57 1.01 4.47 2.68.93 1.72.73 3.75-.4 5.52-1.47 2.33-4.61 5.07-9.37 8.65z"/>
+          </svg>`;
+
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const on = btn.getAttribute('aria-pressed') === 'true';
+          const next = !on;
+          btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+
+          if (next) favIDs.add(id);
+          else favIDs.delete(id);
+
+          saveFavs([...favIDs]);
+
+          // keep your existing optional integrations
+          if (state.favsOnly) apply();
+          if (window.updateFavsPanel) window.updateFavsPanel();
+
+          try{
+            const v = Number(card.dataset.vehicleId || 0) || 0;
+            if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
+          }catch(e){}
+        });
+
+        card.appendChild(btn);
+      });
+    }catch(e){}
+  };
+
+  // Finance placeholder now also runs AFTER render
+  window.__ticaryFinanceFix = function(scope){
+    try{
+      const cards = (scope || document).querySelectorAll('.as-card');
+      cards.forEach((card) => {
+        const finEl = card.querySelector('.as-finance-inline');
+        if (!finEl) return;
+        const n = num(finEl.textContent);
+        if (!isFinite(n) || n <= 0) {
+          finEl.textContent = 'Contact dealer for finance';
+          finEl.classList.add('as-finance-inline--fallback');
+        }
+      });
+    }catch(e){}
+  };
+
+
+  // GLOBAL LISTS FILTERS
+  const allMakes     = uniqueSorted(items.map(x => x.data.make));
+  const modelsByMake = {};
+
+  items.forEach(({ data }) => {
+    if (data.make)  (modelsByMake[data.make]  ||= new Set()).add(data.model);
+  });
+
+  Object.keys(modelsByMake).forEach(m => modelsByMake[m] = uniqueSorted([...modelsByMake[m]]));
+
+  const fuels     = uniqueSorted(items.map(x => x.data.fuel));
+  const gearboxes = uniqueSorted(items.map(x => x.data.gearbox));
+  const bodytypes = uniqueSorted(items.map(x => x.data.bodytype)).filter(Boolean);
+  const colours   = uniqueSorted(items.map(x => x.data.color)).filter(Boolean);
+  const engines = Array.from(
+  new Set(
+    items
+      .map(x => x.data.engine)
+      .filter(v => {
+        const n = num(v);
+        return isFinite(n) && n > 0;
+      })
+      .map(v => Math.round(num(v) * 10) / 10)
+  )
+).sort((a, b) => a - b);
+
+
+  const yearMin = Math.min(...items.map(x => isFinite(x.data.year) ? x.data.year : Infinity));
+  const yearMax = Math.max(...items.map(x => isFinite(x.data.year) ? x.data.year : -Infinity));
+
+   state = {
+    sort: 'price-desc',
+    shown: PAGE_SIZE,
+    favsOnly: false,
+    filters: {
+      make: '', model: '', trim: '',
+      fuel: '', gearbox: '', bodytype: '', colour: '',
+      engineMin: '', engineMax: '',
+      priceMin: '', priceMax: '', financeMin: '', financeMax: '',
+      yearMin: '', yearMax: '', mileageMax: '', distance: '', origin: null
+    },
+    draft: null
+  };
+  window.state = state;
+  let commitTimer = null;
+
+  // BUILD FILTERS UI
+  function buildFiltersUI() {
+    const host = $('#as-filters-body') || $('#as-filters');
+    if (!host || host.querySelector('.asf')) return;
+
+    const sec = (id, title, body, open = false) => `
+      <section class="asf-sec" id="${id}" data-open="${open ? 'true' : 'false'}">
+        <header><h5>${title}</h5><span class="chev"></span></header>
+        <div class="asf-body">${body}</div>
+      </section>`;
+
+    const html = `
+      <div class="asf">
+        ${sec('asf-distance', 'Distance', `
+         <div class="row">
+           <label for="asf-origin">Postcode or address</label>
+           <div class="btnbar" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;">
+            <input id="asf-origin" type="text" placeholder="e.g. SW1A 1AA or Bristol" style="flex:1 1 auto;min-width:0">
+            <button type="button" id="asf-origin-set" class="btn pin">Set</button>
+           </div>
+
+           <button type="button" id="asf-use-loc" class="btn" style="margin-top:8px;width:100%;">Use my location</button>
+           <div class="help" id="asf-loc-status"></div>
+         </div>
+
+         <div class="row">
+            <div class="asf-distance-row">
+              <button type="button" id="asf-dist-dec" class="btn asf-dist-step">−</button>
+
+              <div class="as-range as-range--distance">
+                <div class="as-range-track"></div>
+                <input id="asf-distance-range" type="range" min="5" max="300" step="5" value="25" disabled>
+              </div>
+
+              <button type="button" id="asf-dist-inc" class="btn asf-dist-step">+</button>
+            </div>
+            <div class="help asf-distance-help">
+              <span id="asf-distance-label">Within 25 miles</span>
+            </div>
+         </div>
+        `, true)}
+
+        ${sec('asf-vehicle', 'Vehicle', `
+          <div class="row">
+            <label for="asf-make">Make</label>
+            <select id="asf-make">
+              <option value="">Any</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="asf-model">Model</label>
+            <select id="asf-model" disabled>
+              <option value="">Choose make first</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="asf-trim">Variant</label>
+            <input
+              id="asf-trim"
+              type="text"
+              placeholder="Choose model first"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="grid-2" style="margin-bottom: 10px;">
+            <div class="row">
+              <label for="asf-engine-min">Engine min</label>
+              <select id="asf-engine-min">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="asf-engine-max">Engine max</label>
+              <select id="asf-engine-max">
+                <option value="">Any</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="row">
+              <label for="asf-fuel">Fuel</label>
+              <select id="asf-fuel">
+                <option value="">Any</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="asf-gear">Gearbox</label>
+              <select id="asf-gear">
+                <option value="">Any</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="display:${bodytypes.length ? 'block' : 'none'}">
+            <div class="grid-2">
+              <div class="row">
+                <label for="asf-bodytype">Body type</label>
+                <select id="asf-bodytype">
+                  <option value="">Any</option>
+                </select>
+              </div>
+              <div class="row">
+                <label for="asf-colour">Colour</label>
+                <select id="asf-colour">
+                  <option value="">Any</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        `, false)}
+
+        ${sec('asf-year', 'Year', `
+          <div class="grid-2">
+            <div class="row">
+              <label for="asf-year-min">Year from</label>
+              <input id="asf-year-min" type="number" inputmode="numeric" placeholder="${isFinite(yearMin) ? yearMin : ''}">
+            </div>
+            <div class="row">
+              <label for="asf-year-max">Year to</label>
+              <input id="asf-year-max" type="number" inputmode="numeric" placeholder="${isFinite(yearMax) ? yearMax : ''}">
+            </div>
+          </div>
+        `, false)}
+
+        ${sec('asf-price', 'Price', `
+          <div class="grid-2">
+            <div class="row">
+              <label for="asf-price-min">Price min</label>
+              <select id="asf-price-min">
+                <option value="">Any</option>
+                <option value="500">£500</option>
+                <option value="1000">£1,000</option>
+                <option value="1500">£1,500</option>
+                <option value="2000">£2,000</option>
+                <option value="2500">£2,500</option>
+                <option value="3000">£3,000</option>
+                <option value="4000">£4,000</option>
+                <option value="5000">£5,000</option>
+                <option value="7500">£7,500</option>
+                <option value="10000">£10,000</option>
+                <option value="12500">£12,500</option>
+                <option value="15000">£15,000</option>
+                <option value="20000">£20,000</option>
+                <option value="25000">£25,000</option>
+                <option value="30000">£30,000</option>
+                <option value="35000">£35,000</option>
+                <option value="40000">£40,000</option>
+                <option value="45000">£45,000</option>
+                <option value="50000">£50,000</option>
+                <option value="60000">£60,000</option>
+                <option value="70000">£70,000</option>
+                <option value="80000">£80,000</option>
+                <option value="90000">£90,000</option>
+                <option value="100000">£100,000</option>
+                <option value="125000">£125,000</option>
+                <option value="150000">£150,000</option>
+                <option value="200000">£200,000</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="asf-price-max">Price max</label>
+              <select id="asf-price-max">
+                <option value="">Any</option>
+                <option value="3000">£3,000</option>
+                <option value="4000">£4,000</option>
+                <option value="5000">£5,000</option>
+                <option value="7500">£7,500</option>
+                <option value="10000">£10,000</option>
+                <option value="12500">£12,500</option>
+                <option value="15000">£15,000</option>
+                <option value="20000">£20,000</option>
+                <option value="25000">£25,000</option>
+                <option value="30000">£30,000</option>
+                <option value="35000">£35,000</option>
+                <option value="40000">£40,000</option>
+                <option value="45000">£45,000</option>
+                <option value="50000">£50,000</option>
+                <option value="60000">£60,000</option>
+                <option value="70000">£70,000</option>
+                <option value="80000">£80,000</option>
+                <option value="90000">£90,000</option>
+                <option value="100000">£100,000</option>
+                <option value="125000">£125,000</option>
+                <option value="150000">£150,000</option>
+                <option value="200000">£200,000</option>
+              </select>
+            </div>
+          </div>
+
+          <h6 class="asf-monthly-label">Monthly price</h6>
+          <div class="grid-2">
+            <div class="row">
+              <label for="asf-fin-min">Monthly min</label>
+              <select id="asf-fin-min">
+                <option value="">Any</option>
+                <option value="50">£50</option>
+                <option value="75">£75</option>
+                <option value="100">£100</option>
+                <option value="125">£125</option>
+                <option value="150">£150</option>
+                <option value="175">£175</option>
+                <option value="200">£200</option>
+                <option value="225">£225</option>
+                <option value="250">£250</option>
+                <option value="275">£275</option>
+                <option value="300">£300</option>
+                <option value="325">£325</option>
+                <option value="350">£350</option>
+                <option value="375">£375</option>
+                <option value="400">£400</option>
+                <option value="450">£450</option>
+                <option value="500">£500</option>
+                <option value="600">£600</option>
+                <option value="700">£700</option>
+                <option value="800">£800</option>
+                <option value="900">£900</option>
+                <option value="1000">£1,000</option>
+                <option value="1250">£1,250</option>
+                <option value="1500">£1,500</option>
+                <option value="2000">£2,000</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="asf-fin-max">Monthly max</label>
+              <select id="asf-fin-max">
+                <option value="">Any</option>
+                <option value="150">£150</option>
+                <option value="175">£175</option>
+                <option value="200">£200</option>
+                <option value="225">£225</option>
+                <option value="250">£250</option>
+                <option value="275">£275</option>
+                <option value="300">£300</option>
+                <option value="325">£325</option>
+                <option value="350">£350</option>
+                <option value="375">£375</option>
+                <option value="400">£400</option>
+                <option value="450">£450</option>
+                <option value="500">£500</option>
+                <option value="600">£600</option>
+                <option value="700">£700</option>
+                <option value="800">£800</option>
+                <option value="900">£900</option>
+                <option value="1000">£1,000</option>
+                <option value="1250">£1,250</option>
+                <option value="1500">£1,500</option>
+                <option value="2000">£2,000</option>
+                <option value="2500">£2,500</option>
+              </select>
+            </div>
+          </div>
+        `, false)}
+
+        ${sec('asf-mileage', 'Mileage', `
+          <div class="row">
+            <label for="asf-mileage-max">Max mileage</label>
+            <select id="asf-mileage-max">
+              <option value="">Any</option>
+              <option value="0">0 (Brand new)</option>
+              <option value="5000">5,000</option>
+              <option value="10000">10,000</option>
+              <option value="15000">15,000</option>
+              <option value="20000">20,000</option>
+              <option value="30000">30,000</option>
+              <option value="40000">40,000</option>
+              <option value="50000">50,000</option>
+              <option value="60000">60,000</option>
+              <option value="80000">80,000</option>
+              <option value="100000">100,000</option>
+              <option value="120000">120,000</option>
+              <option value="150000">150,000</option>
+              <option value="200000">200,000</option>
+            </select>
+          </div>
+        `, false)}
+
+        <div class="asf-controls">
+          <div class="asf-controls-row asf-controls-bottom">
+            <button type="button" id="asf-clear" class="btn asf-clear-main" style="width:100%;">Clear all</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const shell = document.createElement('div');
+    shell.innerHTML = html;
+    host.appendChild(shell.firstElementChild);
+    const scope = host.querySelector('.asf');
+
+    // Mobile filters header (Filters / Done)
+    if (scope && !host.querySelector('.asf-mobile-head')) {
+      const mHead = document.createElement('div');
+      mHead.className = 'asf-mobile-head';
+      mHead.innerHTML = `
+        <div class="asf-mobile-title">Filters</div>
+        <button type="button" class="asf-mobile-close" id="asf-mobile-close">Done</button>
+      `;
+      host.insertBefore(mHead, scope);
+    }
+
+    const mobileClose = host.querySelector('#asf-mobile-close');
+    mobileClose?.addEventListener('click', () => {
+      if (window.tcFilterPanel && typeof window.tcFilterPanel.close === 'function') {
+        window.tcFilterPanel.close();
+      } else {
+        document.body.classList.add('as-no-filters');
+      }
+    });
+
+    const btnClear = $('#asf-clear', scope);
+
+    $$('.asf-sec', scope).forEach(sec => {
+      sec.querySelector('header')?.addEventListener('click', () => {
+        const open = sec.getAttribute('data-open') === 'true';
+        sec.setAttribute('data-open', !open ? 'true' : 'false');
+      });
+    });
+
+    const selMake      = $('#asf-make', scope),
+          selModel     = $('#asf-model', scope),
+          selTrim      = $('#asf-trim', scope),
+          selEngineMin = $('#asf-engine-min', scope),
+          selEngineMax = $('#asf-engine-max', scope);
+    const selFuel      = $('#asf-fuel', scope),
+          selGear      = $('#asf-gear', scope);
+    const selBody      = $('#asf-bodytype', scope),
+          selColour    = $('#asf-colour', scope);
+          
+              // Variant keyword starts locked
+    if (selTrim) {
+      selTrim.disabled = true;
+    }
+
+    allMakes.forEach(v  => selMake.appendChild(new Option(v, v)));
+    engines.forEach(v   => {
+      const label = formatEngineLabel(v);
+      selEngineMin?.appendChild(new Option(label, v));
+      selEngineMax?.appendChild(new Option(label, v));
+    });
+    fuels.forEach(v     => selFuel.appendChild(new Option(v, v)));
+    gearboxes.forEach(v => selGear.appendChild(new Option(v, v)));
+    bodytypes.forEach(v => selBody?.appendChild(new Option(v, v)));
+    colours.forEach(v   => selColour?.appendChild(new Option(v, v)));
+
+    const fillModels = (make) => {
+      selModel.innerHTML = '';
+      if (!make) {
+        selModel.disabled = true;
+        selModel.appendChild(new Option('Choose make first', ''));
+        return;
+      }
+      selModel.appendChild(new Option('Any', ''));
+      (modelsByMake[make] || []).forEach(v => selModel.appendChild(new Option(v, v)));
+      selModel.disabled = false;
+    };
+        // For free-text variant search we just clear it when make/model change
+    const fillTrims = (model) => {
+      if (!selTrim) return;
+      selTrim.value = '';
+    };
+
+
+    state.draft = JSON.parse(JSON.stringify(state.filters));
+
+    function commitAndApplyFromUI() {
+      state.filters = JSON.parse(JSON.stringify(state.draft));
+      if (commitTimer) clearTimeout(commitTimer);
+      commitTimer = setTimeout(() => {
+        state.shown = PAGE_SIZE;
+        apply();
+        if (typeof window.updateURLFromForm === 'function') {
+          try { window.updateURLFromForm(); } catch (e) {}
+        }
+      }, 120);
+    }
+
+        selMake.addEventListener('change', () => {
+      state.draft.make  = selMake.value;
+      state.draft.model = '';
+      state.draft.trim  = '';
+
+      fillModels(state.draft.make);
+      fillTrims('');
+
+      if (selTrim) {
+        selTrim.value    = '';
+        selTrim.disabled = true; // lock until model is chosen
+      }
+
+      commitAndApplyFromUI();
+    });
+
+    selModel.addEventListener('change', () => {
+      state.draft.model = selModel.value;
+      state.draft.trim  = '';
+
+      fillTrims(state.draft.model);
+
+      if (selTrim) {
+        selTrim.value    = '';
+        // enable only when both make + model are picked
+        selTrim.disabled = !(state.draft.make && state.draft.model);
+      }
+
+      commitAndApplyFromUI();
+    });
+
+    // Variant keyword search – live
+    if (selTrim) {
+      selTrim.addEventListener('input', () => {
+        state.draft.trim = selTrim.value.trim();
+        commitAndApplyFromUI();
+      });
+    }
+
+    function syncEngineMin() {
+      if (!selEngineMin) return;
+      const minVal = num(selEngineMin.value);
+      const maxVal = selEngineMax ? num(selEngineMax.value) : NaN;
+
+      let min = isFinite(minVal) ? minVal : '';
+      let max = isFinite(maxVal) ? maxVal : '';
+
+      if (min !== '' && max !== '' && min > max && selEngineMax) {
+        selEngineMax.value = String(min);
+        max = min;
+      }
+
+      state.draft.engineMin = min;
+      state.draft.engineMax = max;
+      commitAndApplyFromUI();
+    }
+
+    function syncEngineMax() {
+      if (!selEngineMax) return;
+      const maxVal = num(selEngineMax.value);
+      const minVal = selEngineMin ? num(selEngineMin.value) : NaN;
+
+      let max = isFinite(maxVal) ? maxVal : '';
+      let min = isFinite(minVal) ? minVal : '';
+
+      if (min !== '' && max !== '' && max < min && selEngineMin) {
+        selEngineMin.value = String(max);
+        min = max;
+      }
+
+      state.draft.engineMin = min;
+      state.draft.engineMax = max;
+      commitAndApplyFromUI();
+    }
+
+    selEngineMin?.addEventListener('change', syncEngineMin);
+    selEngineMax?.addEventListener('change', syncEngineMax);
+
+    selFuel.addEventListener('change', () => {
+      state.draft.fuel = selFuel.value;
+      commitAndApplyFromUI();
+    });
+    selGear.addEventListener('change', () => {
+      state.draft.gearbox = selGear.value;
+      commitAndApplyFromUI();
+    });
+    selBody?.addEventListener('change', () => {
+      state.draft.bodytype = selBody.value;
+      commitAndApplyFromUI();
+    });
+    selColour?.addEventListener('change', () => {
+      state.draft.colour = selColour.value;
+      commitAndApplyFromUI();
+    });
+
+    const iPriceMin = $('#asf-price-min', scope),
+          iPriceMax = $('#asf-price-max', scope);
+    const iYearMin  = $('#asf-year-min', scope),
+          iYearMax  = $('#asf-year-max', scope);
+    const iMilesMax = $('#asf-mileage-max', scope);
+    const iFinMin   = $('#asf-fin-min', scope),
+          iFinMax   = $('#asf-fin-max', scope);
+
+    const readNum = el => { const v = num(el.value); return isFinite(v) ? v : ''; };
+
+    [iPriceMin, iPriceMax, iYearMin, iYearMax, iMilesMax, iFinMin, iFinMax].forEach(inp => {
+      inp?.addEventListener('change', () => {
+        state.draft.priceMin    = readNum(iPriceMin);
+        state.draft.priceMax    = readNum(iPriceMax);
+        state.draft.yearMin     = readNum(iYearMin);
+        state.draft.yearMax     = readNum(iYearMax);
+        state.draft.mileageMax  = readNum(iMilesMax);
+        state.draft.financeMin  = readNum(iFinMin);
+        state.draft.financeMax  = readNum(iFinMax);
+        commitAndApplyFromUI();
+      });
+    });
+
+    // DISTANCE WIDGET
+    const originInput = $('#asf-origin', scope),
+          originSet   = $('#asf-origin-set', scope);
+    const btnUseLoc   = $('#asf-use-loc', scope),
+          rngDist     = $('#asf-distance-range', scope);
+    const lblDist     = $('#asf-distance-label', scope),
+          lblStat     = $('#asf-loc-status', scope);
+    const btnDistDec  = $('#asf-dist-dec', scope),
+          btnDistInc  = $('#asf-dist-inc', scope);
+
+    const setDistLabel = () => {
+      if (!rngDist || !lblDist) return;
+      const max        = Number(rngDist.max || 300);
+      const val        = Number(rngDist.value || 0);
+      const isNational = (val >= max);
+
+      lblDist.textContent = isNational ? 'National' : `Within ${val} miles`;
+
+      if (window.__asDistanceRadiusLive) {
+        const miles = isNational ? 0 : val;
+        window.__asDistanceRadiusLive(miles);
+      }
+    };
+
+    setDistLabel();
+
+    if (rngDist) {
+      rngDist.addEventListener('input', setDistLabel);
+      rngDist.addEventListener('change', () => {
+        const max = Number(rngDist.max || 300);
+        const val = Number(rngDist.value || 0);
+        state.draft.distance = (val >= max) ? '' : val;
+        commitAndApplyFromUI();
+      });
+    }
+
+    function stepDistance(delta) {
+      if (!rngDist) return;
+      const min = Number(rngDist.min || 0);
+      const max = Number(rngDist.max || 300);
+      let val   = Number(rngDist.value || 0);
+      if (!isFinite(val)) val = min || 0;
+
+      val = Math.round((val + delta) / 10) * 10;
+      if (val < min) val = min;
+      if (val > max) val = max;
+
+      rngDist.value = String(val);
+      const maxRange = Number(rngDist.max || 300);
+      state.draft.distance = (val >= maxRange) ? '' : val;
+      rngDist.dispatchEvent(new Event('input', { bubbles: false }));
+      commitAndApplyFromUI();
+    }
+
+    if (btnDistDec) btnDistDec.addEventListener('click', () => stepDistance(-10));
+    if (btnDistInc) btnDistInc.addEventListener('click', () => stepDistance(10));
+
+    async function geocodeAddress(q) {
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?limit=1&country=gb&access_token=${MAPBOX_TOKEN}`;
+        const r   = await fetch(url);
+        const j   = await r.json();
+        const f   = j?.features?.[0];
+        if (f && Array.isArray(f.center)) return { lng: f.center[0], lat: f.center[1] };
+      } catch {}
+      return null;
+    }
+
+    originSet.addEventListener('click', async () => {
+      const q = (originInput.value || '').trim();
+      if (!q) { lblStat.textContent = 'Enter a postcode or address'; return; }
+      lblStat.textContent = 'Searching…';
+      const pt = await geocodeAddress(q);
+      if (pt) {
+        state.draft.origin = pt;
+        rngDist.disabled   = false;
+        lblStat.textContent = 'Location set';
+        state.draft.distance = Number(rngDist.value) || '';
+        commitAndApplyFromUI();
+      } else {
+        lblStat.textContent = 'Not found';
+      }
+    });
+
+    btnUseLoc.addEventListener('click', () => {
+      lblStat.textContent = 'Locating…';
+      if (!navigator.geolocation) { lblStat.textContent = 'Geolocation not supported'; return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          state.draft.origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          rngDist.disabled   = false;
+          lblStat.textContent = 'Location set';
+          state.draft.distance = Number(rngDist.value) || '';
+          commitAndApplyFromUI();
+        },
+        () => {
+          lblStat.textContent = 'Location denied';
+          rngDist.disabled    = true;
+          state.draft.origin  = null;
+          state.draft.distance = '';
+          commitAndApplyFromUI();
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    });
+
+    btnClear?.addEventListener('click', () => {
+      state.filters = {
+        make: '', model: '', trim: '',
+        fuel: '', gearbox: '', bodytype: '', colour: '',
+        engineMin: '', engineMax: '',
+        priceMin: '', priceMax: '', financeMin: '', financeMax: '',
+        yearMin: '', yearMax: '', mileageMax: '', distance: '',
+        origin: state.filters.origin
+      };
+      state.draft = JSON.parse(JSON.stringify(state.filters));
+
+               selMake.value = '';
+
+      if (selModel) {
+        selModel.innerHTML = '';
+        selModel.appendChild(new Option('Choose make first', ''));
+        selModel.disabled = true;
+      }
+
+      if (selTrim) {
+        selTrim.value    = '';
+        selTrim.disabled = true; // lock variant keyword again on clear
+      }
+
+      if (selEngineMin) selEngineMin.value = '';
+      if (selEngineMax) selEngineMax.value = '';
+      selFuel.value = '';
+      selGear.value = '';
+      if (selBody)   selBody.value   = '';
+      if (selColour) selColour.value = '';
+
+      iPriceMin.value = ''; iPriceMax.value = '';
+      iYearMin.value  = ''; iYearMax.value  = '';
+      iMilesMax.value = '';
+      if (iFinMin) iFinMin.value = '';
+      if (iFinMax) iFinMax.value = '';
+
+      if (rngDist) {
+        rngDist.value = rngDist.max;
+        setDistLabel();
+      }
+      state.draft.distance   = '';
+      state.filters.distance = '';
+      state.shown = PAGE_SIZE;
+      apply();
+
+      if (typeof window.updateURLFromForm === 'function') {
+        try { window.updateURLFromForm(); } catch (e) {}
+      }
+
+    });
+  }
+
+  // Variant / edition search helpers
+  function normaliseVariantText(str) {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function matchesVariantQuery(editionRaw, queryRaw) {
+    if (!editionRaw || !queryRaw) return false;
+
+    const edition = normaliseVariantText(editionRaw);
+    const query   = normaliseVariantText(queryRaw);
+
+    if (!edition || !query) return false;
+
+    // Phrase-level
+    if (edition.includes(query)) return true;
+
+    // Word-level: all query tokens must appear as whole words
+    const words  = edition.split(' ');
+    const tokens = query.split(' ');
+
+    return tokens.every(token => {
+      if (!token) return true;
+      return words.includes(token);
+    });
+  }
+
+  function passesFilters(r) {
+    const f = state.filters;
+    const d = r.data;
+
+    if (f.make && d.make !== f.make) return false;
+    if (f.model && d.model !== f.model) return false;
+
+    if (f.trim) {
+      const ed = d.edition || d.trim || '';
+      if (!matchesVariantQuery(ed, f.trim)) return false;
+    }
+
+    if (f.fuel && d.fuel !== f.fuel) return false;
+    if (f.gearbox && d.gearbox !== f.gearbox) return false;
+    if (f.bodytype && d.bodytype !== f.bodytype) return false;
+
+    if (f.colour) {
+      const carColour = (d.color || '').trim().toLowerCase();
+      if (!carColour || carColour !== f.colour.toLowerCase()) return false;
+    }
+
+    // Engine range
+    if (f.engineMin !== '' || f.engineMax !== '') {
+      const engVal = num(d.engine);
+      if (!isFinite(engVal)) return false;
+      if (f.engineMin !== '' && engVal < f.engineMin) return false;
+      if (f.engineMax !== '' && engVal > f.engineMax) return false;
+    }
+
+    if (f.priceMin !== '' && (!isFinite(d.price) || d.price < f.priceMin)) return false;
+    if (f.priceMax !== '' && (!isFinite(d.price) || d.price > f.priceMax)) return false;
+
+    if ((f.financeMin !== '' || f.financeMax !== '')) {
+      if (!isFinite(d.finance) || d.finance <= 0) return false;
+      if (f.financeMin !== '' && d.finance < f.financeMin) return false;
+      if (f.financeMax !== '' && d.finance > f.financeMax) return false;
+    }
+
+    if (f.yearMin !== '' && (!isFinite(d.year) || d.year < f.yearMin)) return false;
+    if (f.yearMax !== '' && (!isFinite(d.year) || d.year > f.yearMax)) return false;
+
+    if (f.mileageMax !== '' && (!isFinite(d.mileage) || d.mileage > f.mileageMax)) return false;
+
+    if (f.distance && f.origin) {
+      const dm = distMiles({ lat: d.lat, lng: d.lng }, f.origin);
+      if (!isFinite(dm) || dm > f.distance) return false;
+    }
+
+    return true;
+  }
+
+  function itemDistanceMiles(data) {
+    const origin = state.filters.origin;
+    if (!origin || !isFinite(data.lat) || !isFinite(data.lng)) return Infinity;
+    const dm = distMiles({ lat: data.lat, lng: data.lng }, origin);
+    return isFinite(dm) ? dm : Infinity;
+  }
+
+  const sorts = {
+    'price-desc':   (a, b) => (b.data.price || 0)    - (a.data.price || 0),
+    'price-asc':    (a, b) => (a.data.price || 0)    - (b.data.price || 0),
+    'finance-asc':  (a, b) => (a.data.finance || 1e15) - (b.data.finance || 1e15),
+    'finance-desc': (a, b) => (b.data.finance || 0)  - (a.data.finance || 0),
+    'year-desc':    (a, b) => (b.data.year || 0)     - (a.data.year || 0),
+    'year-asc':     (a, b) => (a.data.year || 0)     - (b.data.year || 0),
+    'mileage-asc':  (a, b) => (a.data.mileage || 1e15) - (b.data.mileage || 1e15),
+    'mileage-desc': (a, b) => (b.data.mileage || 0)  - (a.data.mileage || 0),
+    'distance-asc': (a, b) => itemDistanceMiles(a.data) - itemDistanceMiles(b.data)
+  };
+
+  function renderTags() {
+    const cont = $('.as-filter-tags');
+    if (!cont) return;
+    cont.innerHTML = '';
+
+    const f = state.filters;
+    const addTag = (label, key, val) => {
+      const tag = document.createElement('div');
+      tag.className = 'as-filter-tag';
+      tag.innerHTML = `${label}<button type="button" aria-label="Remove">&times;</button>`;
+      tag.querySelector('button')?.addEventListener('click', () => {
+        state.filters[key] = val !== undefined ? val : '';
+        if (key === 'make') { state.filters.model = ''; state.filters.trim = ''; }
+        if (key === 'model') state.filters.trim = '';
+        apply();
+        try {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch {
+          window.scrollTo(0, 0);
+        }
+      });
+      cont.appendChild(tag);
+    };
+
+    if (f.make)  addTag(`Make: ${f.make}`, 'make');
+    if (f.model) addTag(`Model: ${f.model}`, 'model');
+    if (f.trim)  addTag(`Trim: ${f.trim}`, 'trim');
+    if (f.fuel)  addTag(`Fuel: ${f.fuel}`, 'fuel');
+    if (f.gearbox) addTag(`Gearbox: ${f.gearbox}`, 'gearbox');
+    if (f.bodytype) addTag(`Body: ${f.bodytype}`, 'bodytype');
+    if (f.colour)   addTag(`Colour: ${f.colour}`, 'colour');
+    if (f.engineMin !== '') addTag(`Engine from ${f.engineMin}L`, 'engineMin');
+    if (f.engineMax !== '') addTag(`Engine to ${f.engineMax}L`, 'engineMax');
+    if (f.priceMin !== '') addTag(`Min: £${Number(f.priceMin).toLocaleString('en-GB')}`, 'priceMin');
+    if (f.priceMax !== '') addTag(`Max: £${Number(f.priceMax).toLocaleString('en-GB')}`, 'priceMax');
+    if (f.financeMin !== '') addTag(`Finance: £${Number(f.financeMin).toLocaleString('en-GB')}+/mo`, 'financeMin');
+    if (f.financeMax !== '') addTag(`Finance: £${Number(f.financeMax).toLocaleString('en-GB')}/mo`, 'financeMax');
+    if (f.yearMin   !== '') addTag(`From ${f.yearMin}`, 'yearMin');
+    if (f.yearMax   !== '') addTag(`To ${f.yearMax}`, 'yearMax');
+    if (f.mileageMax !== '') addTag(`Max ${Number(f.mileageMax).toLocaleString('en-GB')} mi`, 'mileageMax');
+    if (f.distance) addTag(`Within ${f.distance} miles`, 'distance', '');
+  }
+
+  function apply() {
+    let filtered;
+    if (state.favsOnly) {
+      filtered = items.filter(x => {
+        const id = x.data.url || x.card.dataset.id || '';
+        return id && favIDs.has(id);
+      });
+    } else {
+      filtered = items.filter(passesFilters);
+    }
+
+    if (state.sort === 'finance-asc' || state.sort === 'finance-desc') {
+      filtered = filtered.filter(x => Number.isFinite(x.data.finance) && x.data.finance > 0);
+    }
+
+    if (state.sort === 'distance-asc') {
+      if (state.filters.origin) {
+        filtered = filtered.filter(x => Number.isFinite(itemDistanceMiles(x.data)));
+      }
+    }
+
+    const sorter =
+      (state.sort === 'distance-asc' && !state.filters.origin)
+        ? sorts['price-desc']
+        : (sorts[state.sort] || sorts['price-desc']);
+
+    const sorted = filtered.slice().sort(sorter);
+    const visibleCount = Math.min(sorted.length, state.shown);
+
+    try {
+      const host = listInner && listInner.parentElement;
+      if (host) {
+        let empty = host.querySelector('.as-no-results');
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'as-no-results';
+          empty.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="as-no-results-icon">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <circle cx="9" cy="10" r="0.9" fill="currentColor" />
+              <circle cx="15" cy="10" r="0.9" fill="currentColor" />
+              <path d="M8.2 16c1-.9 2.2-1.4 3.8-1.4s2.8.5 3.8 1.4"
+                    fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+            <h3>No cars found</h3>
+            <p>No vehicles match your current filters.</p>
+            <p class="as-no-results-sub">
+              Try widening your distance, relaxing price filters,
+              or clearing some spec filters.
+            </p>
+          `;
+          host.insertBefore(empty, listInner);
+        }
+        empty.style.display = sorted.length === 0 ? 'block' : 'none';
+      }
+    } catch (e) {
+      console.warn('No-results placeholder issue', e);
+    }
+
+        // ✅ Render only the visible slice (24 at a time)
+    const cardHTML = window.__ticaryCardHTML;
+
+    if (typeof cardHTML === 'function') {
+      let html = '';
+      for (let i = 0; i < visibleCount; i++) {
+        html += cardHTML(sorted[i].car);
+      }
+
+      // replace list contents with only what's visible
+      listInner.innerHTML = html;
+  
+
+      // lightweight appear animation (keeps your "as-appear" behaviour)
+      const rendered = $$('.w-dyn-item, [role="listitem"]', listInner);
+      rendered.forEach((it) => {
+        it.classList.remove('as-appear');
+        void it.offsetWidth;
+        it.classList.add('as-appear');
+      });
+
+      // attach favourites + finance placeholder for rendered cards only
+      if (window.__ticaryEnsureFavButtons) window.__ticaryEnsureFavButtons(listInner);
+      if (window.__ticaryFinanceFix) window.__ticaryFinanceFix(listInner);
+    } else {
+      // fallback: if card renderer missing, show nothing instead of crashing
+      listInner.innerHTML = '';
+    }
+
+
+    const countEl = $("#as-count-new");
+    if (countEl) {
+      countEl.textContent = `${sorted.length} result${sorted.length === 1 ? "" : "s"}`;
+    }
+
+    const more = $("#as-more");
+    if (more) {
+      const rem = sorted.length - state.shown;
+      more.style.display = rem > 0 ? "block" : "none";
+      if (rem > 0) {
+        more.textContent = `See ${rem} more car${rem === 1 ? "" : "s"}`;
+      }
+    }
+
+    renderTags();
+
+    if (window.updateMap) {
+      window.updateMap({
+        sorted,
+        base: items,
+        filters: state.filters
+      });
+    }
+  }
+
+  function buildToolbar() {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'as-listbar-new';
+    toolbar.innerHTML = `
+      <div class="as-listbar-left">
+        <span id="as-count-new">0 results</span>
+        <div class="as-filter-tags"></div>
+      </div>
+      <div class="as-listbar-right">
+        <select id="as-sort-new">
+          <option value="price-desc">Price: High to Low</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="finance-asc">Finance: Low to High</option>
+          <option value="finance-desc">Finance: High to Low</option>
+          <option value="distance-asc">Distance: Closest first</option>
+          <option value="year-desc">Newest first</option>
+          <option value="year-asc">Oldest first</option>
+          <option value="mileage-asc">Mileage: Low to High</option>
+          <option value="mileage-desc">Mileage: High to Low</option>
+        </select>
+        <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
+        <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
+      </div>
+    `;
+    listInner.parentElement?.insertBefore(toolbar, listInner);
+
+    const sortSel = $('#as-sort-new');
+    if (sortSel) sortSel.value = state.sort;
+    sortSel?.addEventListener('change', (e) => {
+      state.sort = e.target.value;
+      apply();
+    });
+
+    const filterBtn = $('#as-filters-toggle-new');
+    if (filterBtn) {
+      const body   = document.body;
+      const THRESH = 320;
+      let changeMode = false;
+
+      const isMobile = () =>
+        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+      const filtersOpen = () => !body.classList.contains('as-no-filters');
+
+      function setNormalLabel() {
+        if (isMobile()) {
+          filterBtn.textContent = 'Filters';
+        } else {
+          filterBtn.textContent = filtersOpen() ? 'Hide filters' : 'Show filters';
+        }
+      }
+
+      function setChangeLabel() {
+        filterBtn.textContent = 'Change filters';
+      }
+
+      function updateMode() {
+        if (isMobile()) {
+          changeMode = false;
+          setNormalLabel();
+          return;
+        }
+        const shouldChange = window.scrollY > THRESH;
+        if (shouldChange && !changeMode) {
+          changeMode = true;
+          setChangeLabel();
+        } else if (!shouldChange && changeMode) {
+          changeMode = false;
+          setNormalLabel();
+        }
+      }
+
+      setNormalLabel();
+      window.addEventListener('scroll', updateMode, { passive: true });
+
+      filterBtn.addEventListener('click', () => {
+        if (isMobile()) {
+          body.classList.add('as-no-filters');
+          if (window.tcFilterPanel && typeof window.tcFilterPanel.open === 'function') {
+            window.tcFilterPanel.open();
+          }
+          return;
+        }
+
+        if (changeMode) {
+          if (!filtersOpen()) {
+            body.classList.remove('as-no-filters');
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          body.classList.toggle('as-no-filters');
+          setNormalLabel();
+        }
+
+        setTimeout(() => {
+          if (window.map && typeof window.map.resize === 'function') {
+            window.map.resize();
+          }
+        }, 120);
+      });
+    }
+
+    const mapBtn = $('#as-map-toggle-new');
+    if (mapBtn) {
+      const body = document.body;
+      const isMobile = () =>
+        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+      const mapVisible = () => !body.classList.contains('as-no-map');
+
+      function setMapLabel() {
+        if (isMobile()) {
+          mapBtn.textContent = mapVisible() ? 'List' : 'Map';
+        } else {
+          mapBtn.textContent = mapVisible() ? 'Hide map' : 'Show map';
+        }
+      }
+
+      setMapLabel();
+
+      mapBtn.addEventListener('click', () => {
+        if (isMobile()) {
+          const visible = mapVisible();
+          if (visible) {
+            body.classList.add('as-no-map');
+            body.classList.remove('as-mobile-map-only');
+          } else {
+            body.classList.remove('as-no-map');
+            body.classList.add('as-mobile-map-only');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          setMapLabel();
+          setTimeout(() => {
+            if (window.map && typeof window.map.resize === 'function') {
+              window.map.resize();
+            }
+          }, 120);
+          return;
+        }
+
+        const wasVisible = mapVisible();
+        body.classList.toggle('as-no-map');
+        setMapLabel();
+
+        if (!wasVisible) {
+          setTimeout(() => {
+            if (window.map && typeof window.map.resize === 'function') {
+              window.map.resize();
+            }
+          }, 100);
+        }
+      });
+    }
+  }
+
+  const more = $('#as-more');
+  if (more) more.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    state.shown += PAGE_SIZE;
+    apply();
+  });
+
+  window.__ticaryState    = state;
+  window.__ticaryFavIDs   = favIDs;
+  window.__ticarySaveFavs = saveFavs;
+
+  function init() {
+  try {
+    buildToolbar();
+    buildFiltersUI();
+
+    document.body.classList.remove('as-no-filters');
+    document.body.classList.remove('as-no-map');
+    document.body.classList.remove('as-mobile-map-only');
+
+    setTimeout(() => {
+      apply();
+      
+      window.__ticaryPartBLoaded = true;
+      window.dispatchEvent(new CustomEvent('ticary:partb:loaded'));
+      console.log('✅ Part B LOADED FLAG SET');
+
+      console.log('✅ Part B complete');
+    }, 300);
+  } catch (e) {
+    console.error('❌ Part B init crashed', e);
+  }
+}
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(0);

@@ -4226,3 +4226,615 @@ if (t === 'fill' && has(id, /hillshade/i)) {
     };
   }
 })();
+
+(function(){
+  if (window.__metaRowPad) return; window.__metaRowPad = 1;
+
+  function $all(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+  function lineHeightPx(el){
+    var lh = getComputedStyle(el).lineHeight;
+    return lh === 'normal' ? Math.round(parseFloat(getComputedStyle(el).fontSize) * 1.2) : parseFloat(lh);
+  }
+
+  // returns true if the left part ("Fuel • Gearbox") wraps within the row
+  function isWrapped(row){
+    if (!row) return false;
+    var left = row.querySelector('.as-fg');
+    if (!left) return false;
+
+    // width-based check: does left need more width than available (row minus finance)?
+    var finance = row.querySelector('.as-finance-inline');
+    var avail = row.clientWidth - (finance ? finance.offsetWidth : 0) - 8; // small gap
+    var wrapsByWidth = left.scrollWidth > avail;
+
+    // height-based check: row height > one line height
+    var wrapsByHeight = row.scrollHeight > (lineHeightPx(row) * 1.35); // small tolerance
+
+    return wrapsByWidth || wrapsByHeight;
+  }
+
+  function applyPad(){
+    $all('.as-card .as-meta-b').forEach(function(row){
+      try{
+        if (isWrapped(row)) row.classList.remove('as-meta-b--pad');
+        else row.classList.add('as-meta-b--pad');
+      }catch(_){}
+    });
+  }
+
+  // run now, after filters/pagination, and on resize/mutations
+  function boot(){ applyPad(); var t=0, iv=setInterval(function(){ applyPad(); if(++t>10) clearInterval(iv); }, 300); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  var ro; try{
+    ro = new ResizeObserver(applyPad);
+    $all('.as-card .as-meta-b').forEach(function(row){ ro.observe(row); });
+    window.addEventListener('resize', applyPad);
+  }catch(_){
+    window.addEventListener('resize', applyPad);
+  }
+
+  document.addEventListener('click', function(e){
+    if (e.target && e.target.closest('#asf-apply,[data-as-action="apply"],#asf-clear,[data-as-action="clear"],#as-more,.as-more,.w-pagination-next')){
+      setTimeout(function(){ applyPad(); }, 250);
+    }
+  }, true);
+
+  new MutationObserver(function(){ applyPad(); }).observe(document.body,{childList:true,subtree:true});
+})();
+
+(function () {
+  if (window.__backToTopOnce) return; window.__backToTopOnce = 1;
+
+  // --- Config you can tweak ---
+  var SHOW_AFTER_PX = 600;          // when to appear
+  var SIZE = 44;                    // button size in px
+  var BRAND = '#3fb1ce';            // your blue
+
+  // --- Styles ---
+  var css = ''
+  + '.backtop{position:fixed;left:clamp(12px,2vw,20px);'
+  + 'bottom:clamp(12px,2vh,20px);z-index:9999;width:'+SIZE+'px;height:'+SIZE+'px;'
+  + 'border-radius:999px;background:'+BRAND+';color:#fff;display:grid;place-items:center;'
+  + 'box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer;border:none;'
+  + 'opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .18s,transform .18s,visibility .18s}'
+  + '.backtop.show{opacity:1;visibility:visible;transform:translateY(0)}'
+  + '.backtop svg{width:55%;height:55%;pointer-events:none}'
+  + '.backtop:focus{outline:2px solid #fff;outline-offset:2px}'
+  + '.backtop:hover{filter:brightness(1.05)}'
+  + '@media (prefers-reduced-motion:reduce){.backtop{transition:none}}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  // --- Button ---
+  var btn = document.createElement('button');
+  btn.className = 'backtop'; btn.type = 'button'; btn.setAttribute('aria-label','Back to top');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l7 7-1.4 1.4L13 9.8V20h-2V9.8L6.4 13.4 5 12z" fill="currentColor"/></svg>';
+  document.body.appendChild(btn);
+
+  // Click → smooth scroll (respect reduced motion)
+  btn.addEventListener('click', function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+
+  // Show/hide on scroll
+  function toggle(){
+    if (window.scrollY > SHOW_AFTER_PX) { btn.classList.add('show'); }
+    else { btn.classList.remove('show'); }
+  }
+  window.addEventListener('scroll', toggle, { passive: true });
+  document.addEventListener('DOMContentLoaded', toggle);
+  toggle();
+})();
+
+(function(){
+  if (window.__tcEditionTip) return; window.__tcEditionTip = 1;
+
+  var tipEl = null;
+  var activeTarget = null;
+
+  function ensureTip(){
+    if (tipEl) return tipEl;
+    tipEl = document.createElement('div');
+    tipEl.className = 'tc-tip';
+    tipEl.style.display = 'none';
+    document.body.appendChild(tipEl);
+    return tipEl;
+  }
+
+  function getTipText(card, ed){
+    // Prefer Trim (as you were doing), fallback to edition text
+    var trimEl = card.querySelector('.as-trim[fs-list-field="trim"]');
+    var text = (trimEl && trimEl.textContent && trimEl.textContent.trim())
+            || (ed.textContent && ed.textContent.trim())
+            || '';
+    return text;
+  }
+
+  function positionTip(ed){
+    if (!tipEl || tipEl.style.display === 'none') return;
+    var r = ed.getBoundingClientRect();
+
+    // place under the edition line, slightly offset
+    var x = r.left;
+    var y = r.bottom + 10;
+
+    // keep inside viewport
+    var pad = 10;
+    var maxX = window.innerWidth - tipEl.offsetWidth - pad;
+    var maxY = window.innerHeight - tipEl.offsetHeight - pad;
+
+    x = Math.max(pad, Math.min(x, maxX));
+    y = Math.max(pad, Math.min(y, maxY));
+
+    tipEl.style.left = x + 'px';
+    tipEl.style.top  = y + 'px';
+  }
+
+  function showTip(ed){
+  // ONLY show tooltip if edition is actually clamped
+  if (ed.scrollHeight <= ed.clientHeight + 1) return;
+
+  var card = ed.closest('.as-card');
+  if (!card) return;
+
+  var text = getTipText(card, ed);
+  if (!text) return;
+
+  ensureTip();
+  tipEl.textContent = text;
+  tipEl.style.display = 'block';
+  positionTip(ed);
+  activeTarget = ed;
+}
+
+
+  function hideTip(){
+    if (!tipEl) return;
+    tipEl.style.display = 'none';
+    tipEl.textContent = '';
+    activeTarget = null;
+  }
+
+  // event delegation so it works for dynamically loaded cards too
+  document.addEventListener('mouseenter', function(e){
+    var ed = e.target && e.target.closest && e.target.closest('.as-edition[fs-list-field="edition"]');
+    if (!ed) return;
+
+    // remove native delayed tooltip if anything re-added it
+    ed.removeAttribute('title');
+
+    showTip(ed);
+  }, true);
+
+  document.addEventListener('mouseleave', function(e){
+    var ed = e.target && e.target.closest && e.target.closest('.as-edition[fs-list-field="edition"]');
+    if (!ed) return;
+    hideTip();
+  }, true);
+
+  window.addEventListener('scroll', function(){
+    if (activeTarget) positionTip(activeTarget);
+  }, { passive:true });
+
+  window.addEventListener('resize', function(){
+    if (activeTarget) positionTip(activeTarget);
+  });
+
+})();
+
+ (function () {
+    if (window.__asMobileApplyClose) return;
+    window.__asMobileApplyClose = 1;
+
+    function isMobile() {
+      return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    document.addEventListener('click', function (e) {
+      const btn = e.target && e.target.closest(
+        '#asf-apply, #asf-apply-top, .asf-apply, [data-as-action="apply"]'
+      );
+      if (!btn) return;
+
+      // Only do this on mobile, and only if the mobile filters are actually open
+      if (!isMobile()) return;
+      if (!document.body.classList.contains('as-mobile-filters-open')) return;
+
+      const closeBtn = document.querySelector('.asf-mobile-close');
+      if (closeBtn) closeBtn.click(); // use existing close logic
+    }, { capture: true });
+  })();
+  
+    // Lazy-load vehicle thumbnails
+  (function () {
+    if (window.__ticaryLazyThumbs) return;
+    window.__ticaryLazyThumbs = 1;
+
+    function loadThumb(el) {
+      if (!el) return;
+      var src = el.getAttribute('data-bg');
+      if (!src) return;
+      el.style.backgroundImage = "url('" + src.replace(/'/g, "\\'") + "')";
+      el.removeAttribute('data-bg');
+    }
+
+    var io = null;
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          loadThumb(el);
+          if (io) io.unobserve(el);
+        });
+      }, { root: null, rootMargin: '200px 0px', threshold: 0.01 });
+    }
+
+    function watchThumb(el) {
+      if (!el || !el.hasAttribute('data-bg')) return;
+      if (io) {
+        io.observe(el);
+      } else {
+        // no IntersectionObserver support: just load immediately
+        loadThumb(el);
+      }
+    }
+
+    function scanThumbs() {
+      var thumbs = document.querySelectorAll('.as-thumb[data-bg]');
+      thumbs.forEach(watchThumb);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scanThumbs);
+    } else {
+      scanThumbs();
+    }
+
+    // Also handle new cards being added (see more, favourites view, etc.)
+    try {
+      var grid = document.querySelector('#as-grid') ||
+                 document.querySelector('#vehiclesList') ||
+                 document;
+      var mo = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          (m.addedNodes || []).forEach(function (node) {
+            if (!(node instanceof HTMLElement)) return;
+            if (node.matches && node.matches('.as-thumb[data-bg]')) {
+              watchThumb(node);
+            } else if (node.querySelectorAll) {
+              node.querySelectorAll('.as-thumb[data-bg]').forEach(watchThumb);
+            }
+          });
+        });
+      });
+      mo.observe(grid, { childList: true, subtree: true });
+    } catch (e) {}
+  })();
+
+/* =========================================================
+   TICARY – Mobile filters slide-in panel (LOCK PAGE SCROLL)
+   Full replacement for the tcFilterPanel block
+========================================================= */
+(function(){
+  if (window.__tcFilterPanelV2) return;
+  window.__tcFilterPanelV2 = true;
+
+  var panel, panelBody, overlay, contentWrapper;
+  var filtersHost = null;
+
+  // --- Scroll lock helpers ---
+  var __tcScrollY = 0;
+  function lockPageScroll(){
+    // store current scroll
+    __tcScrollY = window.scrollY || window.pageYOffset || 0;
+
+    // lock body in place
+    document.body.style.position = 'fixed';
+    document.body.style.top = (-__tcScrollY) + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
+    // optional hook for CSS if needed
+    document.body.classList.add('tc-scroll-locked');
+  }
+
+  function unlockPageScroll(){
+    // unlock
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+
+    document.body.classList.remove('tc-scroll-locked');
+
+    // restore scroll position
+    window.scrollTo(0, __tcScrollY || 0);
+  }
+
+  function ensurePanel(){
+    if (panel) return;
+
+    // Backdrop
+    overlay = document.createElement('div');
+    overlay.className = 'tc-filter-overlay';
+    document.body.appendChild(overlay);
+
+    // Full-screen panel
+    panel = document.createElement('div');
+    panel.className = 'tc-filter-panel';
+    panel.innerHTML = ''
+      + '<div class="tc-filter-panel-header">'
+      +   '<div class="tc-filter-panel-title">Filters</div>'
+      +   '<button type="button" class="tc-filter-panel-close" aria-label="Close filters">×</button>'
+      + '</div>'
+      + '<div class="tc-filter-panel-body" id="tc-filter-panel-body"></div>';
+    document.body.appendChild(panel);
+
+    panelBody = panel.querySelector('.tc-filter-panel-body');
+
+    // Inner wrapper that will host the *contents* of as-filters-body
+    contentWrapper = document.createElement('div');
+    contentWrapper.className = 'tc-filter-content';
+    panelBody.appendChild(contentWrapper);
+
+    var closeBtn = panel.querySelector('.tc-filter-panel-close');
+
+    function handleClose(){
+      if (window.tcFilterPanel && typeof window.tcFilterPanel.close === 'function') {
+        window.tcFilterPanel.close();
+      }
+    }
+
+    overlay.addEventListener('click', handleClose);
+    closeBtn.addEventListener('click', handleClose);
+  }
+
+  // Move *children* of as-filters-body into the panel
+  function moveFiltersContentsIn(){
+    if (!filtersHost) {
+      filtersHost = document.getElementById('as-filters-body') ||
+                    document.getElementById('as-filters');
+    }
+    if (!filtersHost || !contentWrapper) return;
+
+    // If we already own the contents, don't re-move them
+    if (contentWrapper.__tcOwnsFilters) return;
+
+    while (filtersHost.firstChild) {
+      contentWrapper.appendChild(filtersHost.firstChild);
+    }
+    contentWrapper.__tcOwnsFilters = true;
+  }
+
+  // Put the contents back into as-filters-body for desktop/normal view
+  function restoreFiltersContents(){
+    if (!filtersHost || !contentWrapper || !contentWrapper.__tcOwnsFilters) return;
+
+    while (contentWrapper.firstChild) {
+      filtersHost.appendChild(contentWrapper.firstChild);
+    }
+    contentWrapper.__tcOwnsFilters = false;
+  }
+
+  function open(){
+    ensurePanel();
+    moveFiltersContentsIn();
+
+    // ✅ Lock the page behind
+    lockPageScroll();
+
+    document.body.classList.add('tc-filter-panel-open');
+    if (panel) panel.classList.add('open');
+    if (overlay) overlay.classList.add('active');
+  }
+
+  function close(){
+    restoreFiltersContents();
+
+    document.body.classList.remove('tc-filter-panel-open');
+    if (panel) panel.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+
+    // ✅ Unlock + restore scroll
+    unlockPageScroll();
+  }
+
+  window.tcFilterPanel = { open: open, close: close };
+})();
+
+/* =========================================================
+   TICARY – Mapbox resize synced to filters/map transitions
+   Adds tc-map-mask during resize window to hide black flicker
+========================================================= */
+(function(){
+  if (window.__tcMapboxAnimV1) return;
+  window.__tcMapboxAnimV1 = true;
+
+  const body = document.body;
+  const getMap = () => window.map || window.__asMap || null;
+
+  function safeResize(){
+    const m = getMap();
+    if (!m || typeof m.resize !== 'function') return;
+    try { m.resize(); } catch(e) {}
+  }
+
+  function settleResize(){
+    requestAnimationFrame(() => {
+      safeResize();
+      requestAnimationFrame(safeResize);
+    });
+  }
+
+  function maskOn(){
+  // Set mask colour based on YOUR actual theme hook (html[data-theme="light"])
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  body.style.setProperty('--tc-mask-bg', light ? '#ffffff' : '#0b1220');
+  body.classList.add('tc-map-mask');
+}
+
+  function maskOff(){
+  body.classList.remove('tc-map-mask');
+}
+
+
+  function run(){
+    const grid    = document.querySelector('.as-grid');
+    const mapwrap = document.querySelector('.as-mapwrap');
+
+    maskOn();
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      settleResize();
+      setTimeout(maskOff, 140);
+    };
+
+    const onEnd = (e) => {
+      const t = e && e.target;
+      if (t !== grid && t !== mapwrap) return;
+      const p = String(e.propertyName || '');
+      if (p && !/grid-template-columns|max-height|width|height/i.test(p)) return;
+      finish();
+    };
+
+    const cleanup = () => {
+      if (grid){
+        grid.removeEventListener('transitionend', onEnd);
+        grid.removeEventListener('transitioncancel', onEnd);
+      }
+      if (mapwrap){
+        mapwrap.removeEventListener('transitionend', onEnd);
+        mapwrap.removeEventListener('transitioncancel', onEnd);
+      }
+      clearTimeout(fallback);
+      clearTimeout(mid);
+    };
+
+    if (grid){
+      grid.addEventListener('transitionend', onEnd);
+      grid.addEventListener('transitioncancel', onEnd);
+    }
+    if (mapwrap){
+      mapwrap.addEventListener('transitionend', onEnd);
+      mapwrap.addEventListener('transitioncancel', onEnd);
+    }
+
+    // Midway resize reduces “jump” while mask hides any flicker
+    const mid = setTimeout(safeResize, 140);
+
+    // Always finish
+    const fallback = setTimeout(finish, 900);
+  }
+
+  // Buttons that change map size
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest(
+      '#as-filters-toggle-new, #as-map-toggle-new, #as-map-inline-toggle'
+    );
+    if (!btn) return;
+    setTimeout(run, 0);
+  }, true);
+
+})();
+
+/* =========================================================
+   TICARY – Mapbox smooth OPEN (fix jank on re-open)
+   Only resizes when opening, timed to your CSS slide
+========================================================= */
+(function(){
+  if (window.__tcMapOpenResizeV1) return;
+  window.__tcMapOpenResizeV1 = true;
+
+  const body = document.body;
+
+  function safeResize(){
+    try{
+      if (window.map && typeof window.map.resize === 'function') window.map.resize();
+    }catch(e){}
+  }
+
+  function settleResize(){
+    requestAnimationFrame(() => {
+      safeResize();
+      requestAnimationFrame(safeResize);
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest('#as-map-toggle-new, #as-map-inline-toggle');
+    if (!btn) return;
+
+    // Determine OPENING based on current state BEFORE the click toggles classes
+    const opening = body.classList.contains('as-no-map');
+
+    if (!opening) return; // closing already looks good
+
+    // 1) quick nudge right after DOM/class change
+    setTimeout(safeResize, 40);
+
+    // 2) final settle right after your 320ms CSS transition
+    setTimeout(settleResize, 340);
+  }, true);
+})();
+
+/* TICARY — SEARCH PAGE: HARD DISABLE OLD MAP AREA (SAFE v2) */
+(function(){
+  if (window.__tcSearchMapHardOff_v2) return;
+  window.__tcSearchMapHardOff_v2 = 1;
+
+  function hardOff(){
+    try{
+      if (!document.body) return;
+
+      // Force the “map closed” state your layout expects
+      document.body.classList.add('as-no-map');
+
+      // Hide/disable any map toggle buttons if they exist
+      ['as-map-toggle','as-map-toggle-new','as-map-inline-toggle'].forEach(function(id){
+        var b = document.getElementById(id);
+        if (!b) return;
+        b.style.display = 'none';
+        b.setAttribute('aria-hidden','true');
+        b.setAttribute('tabindex','-1');
+      });
+
+      // Collapse the old map wrapper if present
+      var els = document.querySelectorAll('.as-mapwrap, #as-map');
+      els.forEach(function(el){
+        el.style.display = 'none';
+        el.style.height = '0px';
+        el.style.minHeight = '0px';
+        el.style.maxHeight = '0px';
+        el.style.overflow = 'hidden';
+        el.style.padding = '0px';
+        el.style.margin = '0px';
+      });
+    }catch(e){
+      // swallow errors so we never break the rest of the page
+      console.warn('[tc map hardOff] failed', e);
+    }
+  }
+
+  // Run after Webflow + your other scripts have had a chance to initialize
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(hardOff, 0);
+      setTimeout(hardOff, 200);
+      setTimeout(hardOff, 800);
+    });
+  } else {
+    setTimeout(hardOff, 0);
+    setTimeout(hardOff, 200);
+    setTimeout(hardOff, 800);
+  }
+})();

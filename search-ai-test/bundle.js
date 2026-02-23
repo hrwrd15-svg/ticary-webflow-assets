@@ -2035,9 +2035,6 @@ window.__ticaryApply = function () {
   else window.addEventListener('ticary:partb:loaded', enrich, { once: true });
 })();
 
-
-<!-- TICARY PART D — Facet option counts for ALL filters (Autotrader style) -->
-<script>
 (function TicaryFacetCounts(){
   if (window.__ticaryFacetCountsLoaded) return;
   window.__ticaryFacetCountsLoaded = true;
@@ -2475,7 +2472,7 @@ window.__ticaryApply = function () {
     if (!Array.isArray(window.__ticaryItems) || !window.__ticaryItems.length) {
       if (tries < 120) return setTimeout(() => boot(tries+1), 100);
       return;
-    }  
+    }
     if (!(window.__ticaryState || window.state) || !(getState()?.filters)) {
       if (tries < 120) return setTimeout(() => boot(tries+1), 100);
       return;

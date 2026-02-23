@@ -4065,3 +4065,164 @@ if (t === 'fill' && has(id, /hillshade/i)) {
   setTimeout(hydrate, 600);
 
 })();
+
+(function(){
+  if (window.__tcDrawerFavBridgeV1) return;
+  window.__tcDrawerFavBridgeV1 = 1;
+
+  document.addEventListener("click", function(e){
+    const removeBtn = e.target.closest(".th-fav-item-remove");
+    if (!removeBtn) return;
+
+    const item = removeBtn.closest(".th-fav-item");
+    if (!item) return;
+
+    const link = item.querySelector("a[href]");
+    const url = (link?.getAttribute("href") || link?.href || "").trim();
+    if (!url) return;
+
+    const cards = document.querySelectorAll(".as-card");
+    for (const card of cards){
+      const cardUrl = (card.dataset.url || "").trim();
+      if (cardUrl === url){
+        const heart = card.querySelector(".as-fav-btn");
+        if (heart && heart.getAttribute("aria-pressed") === "true"){
+          heart.click();
+        }
+        break;
+      }
+    }
+  }, true);
+})();
+
+(function(){
+  if (window.__tcFavFabStableV1) return;
+  window.__tcFavFabStableV1 = 1;
+
+  const FAV_KEY = "as:favs";
+
+  function qs(s,r=document){ return r.querySelector(s); }
+
+  function findTopBtn(){
+    return qs('#tc-backtotop, .back-to-top, .as-topbtn, [data-back-to-top]');
+  }
+
+  function findHeaderFavBtn(){
+    return qs(
+      '#tc-header [aria-label*="Favour"],' +
+      '#tc-header [aria-label*="Favor"],' +
+      '#tc-header .th-favs,' +
+      '#tc-header .th-favs-btn,' +
+      '#tc-header #tc-favs-btn,' +
+      '#tc-header [data-favs],' +
+      '#tc-header [data-favs-btn]'
+    );
+  }
+  function findAnyFavBtn(){
+    return qs(
+      '#tc-favs-btn, .th-favs, .th-favs-btn, .as-favs-btn, [data-favs], [data-favs-btn], button[aria-label*="Favour"], button[aria-label*="Favor"]'
+    );
+  }
+
+  // ---------- CREATE FAB ----------
+  function ensureFab(){
+    let fab = document.getElementById('tc-favs-fab');
+    if (!fab){
+      fab = document.createElement('button');
+      fab.id = 'tc-favs-fab';
+      fab.type = 'button';
+      fab.setAttribute('aria-label','Favourites');
+      fab.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M12 21 C 8 18, 4 14, 4 10 C 4 7, 6 5, 8.5 5 C 10 5, 11.5 5.9, 12 7 C 12.5 5.9, 14 5, 15.5 5 C 18 5, 20 7, 20 10 C 20 14, 16 18, 12 21 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+      document.body.appendChild(fab);
+    }
+    let badge = fab.querySelector('.tc-badge');
+    if (!badge){
+      badge = document.createElement('span');
+      badge.className = 'tc-badge';
+      fab.appendChild(badge);
+    }
+    return { fab, badge };
+  }
+
+  const { fab, badge } = ensureFab();
+
+  // click opens your existing drawer button
+  fab.addEventListener('click', function(){
+    const btn = findHeaderFavBtn() || findAnyFavBtn();
+    if (btn) btn.click();
+  });
+
+  // ---------- VISIBILITY (match back-to-top if it exists) ----------
+  function syncVisibility(){
+    const topBtn = findTopBtn();
+    if (topBtn){
+      const cs = getComputedStyle(topBtn);
+      fab.style.display =
+        (cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0')
+          ? 'flex' : 'none';
+    } else {
+      fab.style.display = (window.scrollY > 600) ? 'flex' : 'none';
+    }
+  }
+
+  // ---------- COUNT (ONLY TRUST as:favs + drawer DOM) ----------
+  function getLocalCount(){
+    try{
+      const a = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
+      return Array.isArray(a) ? a.length : 0;
+    }catch(e){ return 0; }
+  }
+
+  function paintCount(){
+    // if drawer has rendered, trust it
+    const drawerCount = document.querySelectorAll('.th-fav-item').length;
+    const n = drawerCount > 0 ? drawerCount : getLocalCount();
+
+    if (n > 0){
+      badge.textContent = (n > 99) ? '99+' : String(n);
+      badge.style.display = 'flex';
+      fab.classList.add('has-count');
+    } else {
+      badge.textContent = '';
+      badge.style.display = 'none';
+      fab.classList.remove('has-count');
+    }
+    fab.setAttribute('aria-label', n > 0 ? `Favourites (${n})` : 'Favourites');
+  }
+
+  function refresh(){
+    syncVisibility();
+    paintCount();
+  }
+
+  // boot
+  refresh();
+
+  // keep it updated
+  window.addEventListener('scroll', syncVisibility, { passive:true });
+  window.addEventListener('resize', syncVisibility);
+  window.addEventListener('focus', paintCount, { passive:true });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) paintCount(); }, { passive:true });
+  window.addEventListener('storage', (e)=>{ if(e.key === FAV_KEY) paintCount(); });
+
+  // after favourite actions / drawer remove / opening drawer
+  document.addEventListener('click', (e)=>{
+    if (e.target.closest('.as-fav-btn') || e.target.closest('.th-fav-item-remove') || e.target.closest('#tc-favs-fab')){
+      setTimeout(paintCount, 120);
+      setTimeout(paintCount, 600);
+    }
+  }, true);
+
+  // if you have updateFavsPanel, hook it so badge always matches drawer
+  const oldUpdate = window.updateFavsPanel;
+  if (typeof oldUpdate === 'function'){
+    window.updateFavsPanel = function(){
+      const out = oldUpdate.apply(this, arguments);
+      setTimeout(paintCount, 0);
+      return out;
+    };
+  }
+})();

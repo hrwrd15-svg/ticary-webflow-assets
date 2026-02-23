@@ -4838,3 +4838,47 @@ if (t === 'fill' && has(id, /hillshade/i)) {
     setTimeout(hardOff, 800);
   }
 })();
+
+(function(){
+  // Mark thumbs as "wide" if their real aspect ratio is very wide
+  const WIDE_RATIO = 1.85; // tweak: 1.75 = more aggressive, 2.0 = only super-wide
+
+  function markThumb(thumb){
+    if (!thumb || thumb.classList.contains('tc-wide-checked')) return;
+    thumb.classList.add('tc-wide-checked');
+
+    // Case A) <img> based
+    const img = thumb.querySelector('img');
+    if (img){
+      const apply = () => {
+        const w = img.naturalWidth || 0;
+        const h = img.naturalHeight || 0;
+        if (w && h && (w / h) >= WIDE_RATIO) thumb.classList.add('is-wide');
+      };
+      if (img.complete) apply();
+      else img.addEventListener('load', apply, { once:true });
+      return;
+    }
+
+    // Case B) background-image based (best-effort: load it to measure)
+    const bg = getComputedStyle(thumb).backgroundImage || '';
+    const m = bg.match(/url\(["']?([^"')]+)["']?\)/i);
+    const src = m ? m[1] : '';
+    if (!src) return;
+
+    const probe = new Image();
+    probe.onload = () => {
+      if ((probe.naturalWidth / probe.naturalHeight) >= WIDE_RATIO) thumb.classList.add('is-wide');
+    };
+    probe.src = src;
+  }
+
+  function scan(){
+    document.querySelectorAll('.as-thumb').forEach(markThumb);
+  }
+
+  // initial + keep up with re-renders (your list re-paints)
+  scan();
+  const mo = new MutationObserver(scan);
+  mo.observe(document.body, { childList:true, subtree:true });
+})();

@@ -353,6 +353,17 @@ window.__ticaryCars = Array.isArray(cars)
   }catch(e){}
 
   log('✅ cars ready:', (window.__ticaryCars||[]).length);
+
+        // Signal to Part B (and anything else) that cars are now available
+  try { window.dispatchEvent(new Event('ticary:cars-ready')); } catch(e){}
+
+  // Race-proof: if Part B defines __ticaryApply slightly later, call again
+  setTimeout(function(){
+    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
+  }, 0);
+  setTimeout(function(){
+    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
+  }, 250);
 });
 
   }

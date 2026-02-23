@@ -2034,7 +2034,7 @@ window.__ticaryApply = function () {
   if (window.__ticaryPartBLoaded) enrich();
   else window.addEventListener('ticary:partb:loaded', enrich, { once: true });
 })();
-</script>
+
 
 <!-- TICARY PART D — Facet option counts for ALL filters (Autotrader style) -->
 <script>

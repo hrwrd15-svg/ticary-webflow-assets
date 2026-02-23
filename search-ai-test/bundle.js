@@ -3083,3 +3083,985 @@ window.__ticaryApply = function () {
     if (init() || tries > 80) clearInterval(t);
   }, 150);
 })();
+
+/* ==== Ticary /improved — Shareable URLs (V3.1 zero-safe) ==== */
+(function(){
+  if (window.__tcUrlSyncV31) return; window.__tcUrlSyncV31 = true;
+
+  // -------- helpers ----------
+  const $  = (s,sc=document)=>sc.querySelector(s);
+  const $$ = (s,sc=document)=>Array.from(sc.querySelectorAll(s));
+  const num = (v)=>{ const n=Number((v||'').toString().replace(/[, ]+/g,'')); return isFinite(n)?n:''; };
+  const to5 = (x)=> (Math.round(x*1e5)/1e5).toString();
+  const z2e = (v)=> v===0 ? '' : v; // zero -> empty (unset)
+
+  const MAP = {
+  make:'m', model:'mo', trim:'tr', fuel:'fu', gearbox:'gb', bodytype:'bt',
+  priceMin:'pmin', priceMax:'pmax', yearMin:'ymin', yearMax:'ymax',
+  mileageMax:'mil', distance:'dist', origin:'o', sort:'s',
+  financeMin:'fmin', financeMax:'fmax'
+};
+
+const parseQS = () => {
+  const q = new URLSearchParams(location.search);
+  const o = {};
+  for (const [k, v] of q) o[k] = v;
+  return o;
+};
+
+
+  function filtersFromQS(q){
+    const f = {
+      make:q[MAP.make]||'', model:q[MAP.model]||'', trim:q[MAP.trim]||'',
+      fuel:q[MAP.fuel]||'', gearbox:q[MAP.gearbox]||'', bodytype:q[MAP.bodytype]||'',
+      priceMin:z2e(num(q[MAP.priceMin])), priceMax:z2e(num(q[MAP.priceMax])),
+      yearMin:z2e(num(q[MAP.yearMin])),   yearMax:z2e(num(q[MAP.yearMax])),
+      mileageMax: z2e(num(q[MAP.mileageMax])),
+      distance:   z2e(num(q[MAP.distance])),
+      financeMin: z2e(num(q[MAP.financeMin])),
+      financeMax: z2e(num(q[MAP.financeMax])),
+      origin:     null,
+      sort:       q[MAP.sort] || ''
+
+    };
+    const O=q[MAP.origin];
+    if (O){ const m=O.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/); if(m) f.origin={lat:+m[1], lng:+m[2]}; }
+    if (!f.origin) f.distance=''; // safety: no origin => ignore distance
+    return f;
+  }
+
+  function setControlsAndStateFromFilters(f, scope){
+    const ev = (el,t='change')=> el && el.dispatchEvent(new Event(t,{bubbles:true}));
+    const setVal=(sel,v)=>{ if (sel && v!==''){ sel.value=v; ev(sel); } };
+    const setNum=(inp,v)=>{ if (inp && v!==''){ inp.value=v; ev(inp,'input'); ev(inp,'change'); } };
+
+    const selMake=$('#asf-make',scope), selModel=$('#asf-model',scope), selTrim=$('#asf-trim',scope);
+
+    // populate dependent selects reliably
+    if (selMake && f.make){ selMake.value=f.make; ev(selMake); }
+    const fillModels = (window.fillModels||window.populateModels||(()=>{}));
+    const fillTrims  = (window.fillTrims ||window.populateTrims ||(()=>{}));
+    try{ if (fillModels && f.make) fillModels(f.make); }catch{}
+    try{ if (selModel && f.model){ selModel.disabled=false; selModel.value=f.model; ev(selModel); } }catch{}
+    try{ if (fillTrims && f.model) fillTrims(f.model); }catch{}
+    try{ if (selTrim && f.trim){ selTrim.disabled=false; selTrim.value=f.trim; ev(selTrim); } }catch{}
+
+    setVal($('#asf-fuel',scope), f.fuel);
+    setVal($('#asf-gear',scope), f.gearbox);
+    setVal($('#asf-bodytype',scope), f.bodytype);
+
+    setNum($('#asf-price-min',scope), f.priceMin);
+    setNum($('#asf-price-max',scope), f.priceMax);
+    setNum($('#asf-year-min', scope), f.yearMin);
+    setNum($('#asf-year-max', scope), f.yearMax);
+    setNum($('#asf-mileage-max',scope), f.mileageMax);
+    setNum($('#asf-fin-min',scope), f.financeMin);
+    setNum($('#asf-fin-max',scope), f.financeMax);
+
+
+    // distance/origin controls
+    const rng=$('#asf-distance-range',scope), lbl=$('#asf-distance-label',scope);
+    if (f.origin){
+      if (!window.state) window.state={};
+      (state.draft ||= {}).origin = {lat:f.origin.lat, lng:f.origin.lng};
+      (state.filters ||= {}).origin = {lat:f.origin.lat, lng:f.origin.lng};
+      if (rng){ rng.disabled=false; if (f.distance!=='') rng.value=String(f.distance); }
+      if (lbl){ const v=rng?.value||f.distance||25; lbl.textContent=`Within ${v} miles`; }
+    }
+
+    // sorting
+    if (f.sort){ const s=$('#as-sort'); if (s){ s.value=f.sort; ev(s,'change'); } }
+
+    // ALSO pack into state (zeros already normalized)
+    if (!window.state) window.state={};
+    const pack = {
+      make:f.make||'', model:f.model||'', trim:f.trim||'',
+      fuel:f.fuel||'', gearbox:f.gearbox||'', bodytype:f.bodytype||'',
+      priceMin:f.priceMin||'', priceMax:f.priceMax||'',
+      yearMin:f.yearMin||'',   yearMax:f.yearMax||'',
+      mileageMax:f.mileageMax||'',
+      distance:f.distance||'',
+      origin:f.origin||null
+    };
+    state.draft   = Object.assign({}, state.draft  ||{}, pack);
+    state.filters = Object.assign({}, state.filters||{}, pack);
+  }
+
+  function buildQSFromControls(scope){
+    const p = new URLSearchParams();
+    const val = (id)=> ( $(id,scope)?.value || '' ).trim();
+    const nn  = (id)=> { const v = num($(id,scope)?.value); return (v===0?'':v); }; // drop zeros
+
+        const m = {
+      [MAP.make]:       val('#asf-make'),
+      [MAP.model]:      val('#asf-model'),
+      [MAP.trim]:       val('#asf-trim'),
+      [MAP.fuel]:       val('#asf-fuel'),
+      [MAP.gearbox]:    val('#asf-gear'),
+      [MAP.bodytype]:   val('#asf-bodytype'),
+      [MAP.priceMin]:   nn('#asf-price-min'),
+      [MAP.priceMax]:   nn('#asf-price-max'),
+      [MAP.yearMin]:    nn('#asf-year-min'),
+      [MAP.yearMax]:    nn('#asf-year-max'),
+      [MAP.mileageMax]: nn('#asf-mileage-max'),
+      [MAP.distance]:   nn('#asf-distance-range'),
+      [MAP.financeMin]: nn('#asf-fin-min'),
+      [MAP.financeMax]: nn('#asf-fin-max'),
+      [MAP.sort]:       $('#as-sort')?.value || ''
+    };
+
+
+    const origin = (window.state && (state.draft?.origin || state.filters?.origin)) || null;
+    if (origin && isFinite(origin.lat) && isFinite(origin.lng)) m[MAP.origin] = `${to5(origin.lat)},${to5(origin.lng)}`;
+    else delete m[MAP.distance]; // no origin => drop dist
+
+    for (const [k,v] of Object.entries(m)) if (v!=='' && v!=null) p.set(k,v);
+    return p.toString();
+  }
+
+  function dataReady(){
+    if (window.state && ((state.items&&state.items.length) || (state.all&&state.all.length))) return true;
+    if (document.querySelector('.as-card,[data-as-id],[data-lat]')) return true;
+    return false;
+  }
+
+  function runApply(){
+    if (typeof window.apply === 'function'){ try{ window.apply(); return; }catch{} }
+    const btn=$('#asf-apply')||$('#asf-apply-top'); if (btn){ btn.click(); return; }
+  }
+
+  function hydrateFromURL(){
+    const q = parseQS();
+    const hasAny = Object.keys(q).some(k=>Object.values(MAP).includes(k));
+    if (!hasAny) return;
+
+    const scope = $('#as-filters-body .asf') || $('#as-filters-body') || document;
+    const f = filtersFromQS(q);
+    setControlsAndStateFromFilters(f, scope);
+
+    // Apply after UI+data are there, then burst-apply a few times to catch late data
+    let tries=0, max=600; // up to ~10s waiting for data
+    const wait = () => {
+      if (dataReady() || tries>max){
+        runApply();
+        for (let i=1;i<=8;i++) setTimeout(runApply, i*250);
+        return;
+      }
+      tries++; requestAnimationFrame(wait);
+    };
+    wait();
+  }
+
+  function updateURLFromForm(){
+    const scope = $('#as-filters-body .asf') || $('#as-filters-body') || document;
+    const qs = buildQSFromControls(scope);
+    const url = qs ? (`?${qs}`) : location.pathname;
+    history.pushState({qs}, '', url);
+  }
+
+  function wire(){
+  const scope = $('#as-filters-body .asf') || $('#as-filters-body') || document;
+
+  const applyLikeButtons = [
+    ...$$('#asf-apply', scope),
+    ...$$('#asf-apply-top', scope),
+    ...$$('#asf-distance-go', scope)
+  ];
+
+  applyLikeButtons.forEach(b => {
+    b.addEventListener('click', () => {
+      // Update URL / results
+      setTimeout(updateURLFromForm, 0);
+
+      // On mobile, close the slide-in filters panel
+      try {
+        const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+        if (isMobile && window.tcFilterPanel && typeof window.tcFilterPanel.close === 'function') {
+          setTimeout(() => window.tcFilterPanel.close(), 0);
+        }
+      } catch (e) {}
+    }, { passive: true });
+  });
+
+  [...$$('#asf-clear',scope), ...$$('#asf-clear-top',scope)].forEach(b=>{
+    b.addEventListener('click', ()=> setTimeout(()=> history.pushState({}, '', location.pathname), 0), {passive:true});
+  });
+  $('#as-sort')?.addEventListener('change', ()=> setTimeout(updateURLFromForm, 0), {passive:true});
+}
+    // Distance "Go" button – same behaviour as Search
+  const distanceGo = $('#asf-distance-go', scope) || document.getElementById('asf-distance-go');
+  if (distanceGo) {
+    distanceGo.addEventListener('click', () => {
+      // Update URL / results
+      setTimeout(updateURLFromForm, 0);
+
+      // On mobile, close the slide-in filters panel
+      try {
+        const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+        if (isMobile && window.tcFilterPanel && typeof window.tcFilterPanel.close === 'function') {
+          setTimeout(() => window.tcFilterPanel.close(), 0);
+        }
+      } catch (e) {}
+    }, { passive: true });
+  }
+
+
+  function boot(){
+  let tries=0, max=300;
+
+  function wrapApplyOnce(){
+    if (window.__tcApplyWrapped) return;
+    const orig = window.apply;
+    if (typeof orig !== 'function') return;
+    window.__tcApplyWrapped = true;
+    window.apply = function(...args){
+      const out = orig.apply(this, args);
+      try { updateURLFromForm(); } catch(e){}
+      return out;
+    };
+  }
+
+  const tick = () => {
+    const uiReady = $('#asf-apply') && $('#as-filters-body');
+    if (uiReady){
+      wrapApplyOnce();
+      wire();
+      hydrateFromURL();
+      return;
+    }
+    if (++tries > max){
+      hydrateFromURL();
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  // Back/forward -> re-hydrate
+  window.addEventListener('popstate', ()=> hydrateFromURL());
+})();
+
+/* Jump to top on Apply / Clear (buttons at top & bottom, and future re-renders) */
+(function(){
+  if (window.__asJumpTop) return; window.__asJumpTop = true;
+
+  function jumpToTop(){
+    try {
+      (document.scrollingElement || document.documentElement)
+        .scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0,0);
+    }
+  }
+
+  // Event delegation so it works even if Webflow re-renders the listbar/filters
+  document.addEventListener('click', function(e){
+    const btn = e.target && e.target.closest(
+      '#asf-apply, #asf-apply-top, #asf-clear, #asf-clear-top, ' +
+      '[data-as-action="apply"], [data-as-action="clear"], ' +
+      '.asf-apply, .asf-clear'
+    );
+    if (btn) jumpToTop();
+  }, { capture:true, passive:true });
+
+  // Also handle Enter key submits inside the filters form
+  document.addEventListener('submit', function(ev){
+    const form = ev.target;
+    if (!form) return;
+    const inFilters = form.closest('#as-filters-body, .asf, #as-filters');
+    if (inFilters) jumpToTop();
+  }, { capture:true });
+})();
+
+/* Ticary — Smart popup anchoring V2
+   Keeps popup attached to the pin but auto-flips anchor on pan/zoom to stay in view. */
+(function(){
+  if (window.__tcSmartPopupAnchorV2) return; window.__tcSmartPopupAnchorV2 = true;
+
+  function offsets(px){
+    return {
+      'top': [0,  px],
+      'top-left': [ px,  px],
+      'top-right': [-px,  px],
+      'bottom': [0, -px],
+      'bottom-left': [ px, -px],
+      'bottom-right': [-px, -px],
+      'left': [ px, 0],
+      'right': [-px, 0]
+    };
+  }
+
+  function adjustAnchor(popup, depth){
+    const map = popup && popup._map; if (!map) return;
+    const mapEl = map.getContainer(); if (!mapEl) return;
+    const el = popup.getElement(); if (!el) return;
+
+    requestAnimationFrame(()=>{
+      const mr = mapEl.getBoundingClientRect();
+      const br = el.getBoundingClientRect();
+      const margin = 8;
+
+      const overTop    = br.top    < mr.top    + margin;
+      const overBottom = br.bottom > mr.bottom - margin;
+      const overLeft   = br.left   < mr.left   + margin;
+      const overRight  = br.right  > mr.right  - margin;
+
+      // If nothing is clipped, we're good.
+      if (!(overTop || overBottom || overLeft || overRight)) return;
+
+      // Screen point of the pin
+      const pt = map.project(popup._lngLat);
+      const availLeft   = (pt.x - mr.left);
+      const availRight  = (mr.right - pt.x);
+      const availTop    = (pt.y - mr.top);
+      const availBottom = (mr.bottom - pt.y);
+
+      let anchor = popup.options.anchor || 'bottom';
+
+      // Prefer switching axis that's overflowing most.
+      if (overTop || overBottom){
+        // vertical overflow → use a side with more space
+        anchor = (availRight >= availLeft) ? 'left' : 'right';
+      } else if (overLeft || overRight){
+        // horizontal overflow → use top/bottom with more space
+        anchor = (availBottom >= availTop) ? 'top' : 'bottom';
+      }
+
+      // If unchanged, bail.
+      if (popup.options.anchor === anchor) return;
+
+      try {
+        popup.options.anchor = anchor;
+        popup.setOffset(offsets(12));
+        // Force Mapbox to recompute layout at the same lng/lat
+        popup.setLngLat(popup._lngLat);
+      } catch(e) {
+        // Rare fallback: recreate popup with new anchor
+        try{
+          const html = el.querySelector('.mapboxgl-popup-content')?.innerHTML || '';
+          const ll = popup._lngLat;
+          const o = popup.options || {};
+          popup.remove();
+          new mapboxgl.Popup({
+            anchor,
+            offset: offsets(12),
+            closeButton: o.closeButton !== false,
+            closeOnClick: o.closeOnClick !== false,
+            maxWidth: o.maxWidth || '320px',
+            className: o.className || ''
+          }).setLngLat(ll).setHTML(html).addTo(map);
+        }catch(_){}
+      }
+
+      // Re-check a couple times in case content size/layout changed.
+      const n = (depth|0);
+      if (n < 3) requestAnimationFrame(()=>adjustAnchor(popup, n+1));
+    });
+  }
+
+  // Patch addTo so every new popup auto-adjusts on open and during map interactions
+  const _addTo = mapboxgl.Popup.prototype.addTo;
+  mapboxgl.Popup.prototype.addTo = function(map){
+    const popup = this;
+    let raf = 0;
+    const reAdjust = ()=>{ cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>adjustAnchor(popup)); };
+
+    popup.once('open', () => {
+      reAdjust();
+      // re-check after images/carousels settle
+      setTimeout(reAdjust, 120);
+      setTimeout(reAdjust, 300);
+    });
+
+    // Keep it in view while the user moves/zooms the map
+    popup.on('open', () => {
+      if (!popup._map) return;
+      const m = popup._map;
+      m.on('move', reAdjust);
+      m.on('zoom', reAdjust);
+      m.on('resize', reAdjust);
+      m.on('moveend', reAdjust);
+    });
+    popup.on('close', () => {
+      if (!popup._map) return;
+      const m = popup._map;
+      m.off('move', reAdjust);
+      m.off('zoom', reAdjust);
+      m.off('resize', reAdjust);
+      m.off('moveend', reAdjust);
+    });
+
+    return _addTo.call(this, map);
+  };
+})();
+
+/* Year inputs → real selects overlay (V2.1)
+   - Keeps original #asf-year-min / #asf-year-max inputs (hidden)
+   - Mirrors values both ways
+   - Auto clamps Min > Max
+   - Resets selects to "Any" on Clear (top/bottom) and on popstate re-hydration */
+(function(){
+  if (window.__asYearSelectsV21) return; window.__asYearSelectsV21 = true;
+
+  const IDS = ['asf-year-min','asf-year-max'];
+  const MIN_YEAR = 1990;
+
+  function buildSelect(forId){
+    const input = document.getElementById(forId);
+    if (!input || input.dataset.hasSelect) return null;
+
+    const curYear = new Date().getFullYear();
+    const sel = document.createElement('select');
+    sel.id = forId + '-select';
+    sel.className = 'asf-year-select';
+    sel.setAttribute('aria-label', forId.includes('min') ? 'Year from' : 'Year to');
+
+    // Any
+    const oAny = document.createElement('option');
+    oAny.value = ''; oAny.textContent = 'Any';
+    sel.appendChild(oAny);
+
+    for (let y = curYear; y >= MIN_YEAR; y--){
+      const o = document.createElement('option');
+      o.value = String(y);
+      o.textContent = String(y);
+      sel.appendChild(o);
+    }
+
+    // initial value from input
+    if (input.value) sel.value = String(input.value);
+
+    // place select before input and hide input (but keep IDs)
+    input.parentNode.insertBefore(sel, input);
+    input.style.display = 'none';
+
+    // mirror select -> input
+    function writeBack(){
+      input.value = sel.value;
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+      input.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+    sel.addEventListener('change', ()=>{ __lastChanged = forId; clampYears(); writeBack(); });
+
+    // mirror input -> select (URL hydration / programmatic)
+    function syncFromInput(){ if (sel.value !== input.value) sel.value = input.value || ''; }
+    input.addEventListener('change', syncFromInput);
+    input.addEventListener('input',  syncFromInput);
+
+    input.dataset.hasSelect = '1';
+    return sel;
+  }
+
+  let __lastChanged = null;
+  function clampYears(){
+    const minIn  = document.getElementById('asf-year-min');
+    const maxIn  = document.getElementById('asf-year-max');
+    const minSel = document.getElementById('asf-year-min-select');
+    const maxSel = document.getElementById('asf-year-max-select');
+    if (!minIn || !maxIn || !minSel || !maxSel) return;
+
+    const a = minSel.value ? parseInt(minSel.value,10) : null;
+    const b = maxSel.value ? parseInt(maxSel.value,10) : null;
+    if (a!=null && b!=null && a>b){
+      if (__lastChanged === 'asf-year-min'){
+        maxSel.value = String(a);
+        maxIn.value  = String(a);
+        maxIn.dispatchEvent(new Event('input', {bubbles:true}));
+        maxIn.dispatchEvent(new Event('change',{bubbles:true}));
+      } else {
+        minSel.value = String(b);
+        minIn.value  = String(b);
+        minIn.dispatchEvent(new Event('input', {bubbles:true}));
+        minIn.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    }
+  }
+
+  function syncFromInputs(){
+    const minIn  = document.getElementById('asf-year-min');
+    const maxIn  = document.getElementById('asf-year-max');
+    const minSel = document.getElementById('asf-year-min-select');
+    const maxSel = document.getElementById('asf-year-max-select');
+    if (minIn && minSel) minSel.value = minIn.value || '';
+    if (maxIn && maxSel) maxSel.value = maxIn.value || '';
+  }
+
+  function resetYearToAny(){
+    const minIn  = document.getElementById('asf-year-min');
+    const maxIn  = document.getElementById('asf-year-max');
+    const minSel = document.getElementById('asf-year-min-select');
+    const maxSel = document.getElementById('asf-year-max-select');
+    if (minSel) minSel.value = '';
+    if (maxSel) maxSel.value = '';
+    if (minIn) { minIn.value=''; minIn.dispatchEvent(new Event('input',{bubbles:true})); minIn.dispatchEvent(new Event('change',{bubbles:true})); }
+    if (maxIn) { maxIn.value=''; maxIn.dispatchEvent(new Event('input',{bubbles:true})); maxIn.dispatchEvent(new Event('change',{bubbles:true})); }
+  }
+
+  function initOnce(){
+    IDS.forEach(buildSelect);
+    clampYears();
+  }
+
+  // Boot when filters are present
+  const boot = ()=>{
+    if (document.getElementById('asf-year-min') && document.getElementById('asf-year-max')){
+      initOnce();
+    } else {
+      let tries=0; const t=setInterval(()=>{
+        if (document.getElementById('asf-year-min') && document.getElementById('asf-year-max')){
+          clearInterval(t); initOnce();
+        } else if (++tries>100){ clearInterval(t); }
+      },50);
+    }
+  };
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  // Re-init if filters rerender
+  const mo = new MutationObserver(()=> initOnce());
+  mo.observe(document.body, {childList:true, subtree:true});
+
+  // Click capture: Clear buttons -> reset selects to Any (and inputs)
+  document.addEventListener('click', function(e){
+    const btn = e.target && e.target.closest('#asf-clear, #asf-clear-top, .asf-clear, [data-as-action="clear"], .as-btn-clear');
+    if (!btn) return;
+    // let their clear logic run, then sync ours
+    setTimeout(resetYearToAny, 0);
+    setTimeout(resetYearToAny, 60);
+    setTimeout(syncFromInputs, 120);
+  }, {capture:true, passive:true});
+
+  // Back/forward navigation may hydrate values → reflect into selects
+  window.addEventListener('popstate', ()=> {
+    setTimeout(syncFromInputs, 0);
+    setTimeout(syncFromInputs, 80);
+  });
+})();
+
+/* Keep the popup "View" button blue on every carousel slide */
+(function(){
+  if (window.__tcPopupViewBlue) return; window.__tcPopupViewBlue = true;
+
+  // Identify a "View" button (fallback if a slide misses .as-pop-view)
+  function isViewBtn(el){
+    if (!el || el.tagName!=='A') return false;
+    if (el.classList.contains('as-pop-view')) return true;
+    const t = (el.textContent||'').trim().toLowerCase();
+    return t === 'view' || t === 'view details' || t === 'view car' || t === 'view vehicle';
+  }
+
+  function tagButtons(scope){
+    scope.querySelectorAll('a').forEach(a=>{
+      if (isViewBtn(a)) a.classList.add('as-pop-view');
+    });
+  }
+
+  // Watch each popup individually so carousel DOM swaps get re-tagged
+  function watchPopup(pop){
+    if (!pop || pop.__watched) return;
+    pop.__watched = true;
+    tagButtons(pop);
+
+    const mo = new MutationObserver(muts=>{
+      for (const m of muts){
+        if (m.type === 'childList'){
+          m.addedNodes && m.addedNodes.forEach(n=>{
+            if (n.nodeType===1) tagButtons(n);
+          });
+        }
+      }
+    });
+    mo.observe(pop, {childList:true, subtree:true});
+  }
+
+  // When a popup appears, start watching it
+  const root = document.body;
+  const boot = ()=>{
+    document.querySelectorAll('.mapboxgl-popup').forEach(watchPopup);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  const globalMO = new MutationObserver(muts=>{
+    for (const m of muts){
+      m.addedNodes && m.addedNodes.forEach(n=>{
+        if (n.nodeType===1 && n.classList.contains('mapboxgl-popup')) watchPopup(n);
+      });
+    }
+  });
+  globalMO.observe(root, {childList:true, subtree:true});
+
+  // Also tag on any click within a popup (covers slide nav buttons)
+  document.addEventListener('click', e=>{
+    const pop = e.target && e.target.closest('.mapboxgl-popup');
+    if (pop) tagButtons(pop);
+  }, {capture:true, passive:true});
+})();
+
+/* === Ticary Map Palette — friendly green land, pale blue water, light roads === */
+(function(){
+  if (window.__tcFlatPaletteV5) return; 
+  window.__tcFlatPaletteV5 = true;
+
+  // Friendly, slightly cartoonish palette
+  const PIN   = '#2F7DE1';  // pin / primary blue
+  const LAND  = '#A9D98B';  // soft light green land
+  const PARK  = '#A9D98B';   // extra-light park/green
+  const WATER = '#3fb1ce';  // ocean = pin blue
+  const BLDG  = '#FFFFFF';  // white buildings
+  const OUTL  = '#9FB6D0';  // soft blue-grey outlines
+  const TEXT  = '#223047';  // dark slate for labels
+
+  const ROAD         = '#FFFFFF'; // main road line (light)
+  const ROAD_OUTLINE = '#F7D69A'; // warm yellowy outline for big roads
+
+  const CITY_KEEP_GREY = true;    // keep urban/residential greys from base style
+
+  // Capture latest map instance if not global
+  (function hookMap(){
+    if (!window.mapboxgl || !mapboxgl.Map || mapboxgl.Map.__tcHooked) return;
+    const Orig = mapboxgl.Map;
+    mapboxgl.Map = function(opts){
+      const inst = new Orig(opts);
+      window.__asMap = inst;
+      return inst;
+    };
+    mapboxgl.Map.prototype = Orig.prototype;
+    mapboxgl.Map.__tcHooked = true;
+  })();
+
+  function mapInst(){ 
+    return window.__asMap || window.map || window.asMap || window.MAP || null; 
+  }
+
+  const setPaint = (m,id,p,v)=>{ try{ m.setPaintProperty(id,p,v); }catch(e){} };
+  const setLayout= (m,id,p,v)=>{ try{ m.setLayoutProperty(id,p,v); }catch(e){} };
+  const has = (id,re)=> re.test(id);
+
+  function recolor(m){
+    const style = m.getStyle && m.getStyle();
+    if (!style || !style.layers) return;
+
+    // 0) Background
+    style.layers
+      .filter(l=>l.type==='background')
+      .forEach(l=>{
+        setPaint(m, l.id, 'background-color', LAND);
+      });
+
+    style.layers.forEach(l=>{
+      const id = l.id || '';
+      const t  = l.type;
+
+     // 1) Land & greens — flatten *everything* green-ish to one colour
+if (
+  t === 'fill' &&
+  has(
+    id,
+    /(land$|landcover|landuse|park|natural|terrain|forest|wood|scrub|grass|meadow|national[-_ ]?park|national[-_ ]?landscape|protected|conservation|nature[-_ ]?reserve)/i
+  )
+) {
+  const isUrban = CITY_KEEP_GREY && has(id,/(urban|residential|built)/i);
+  if (!isUrban){
+    setPaint(m, id, 'fill-color', LAND);
+    setPaint(m, id, 'fill-opacity', 1);
+  }
+}
+// 1b) Remove hillshade / relief darkening
+if (t === 'fill' && has(id, /hillshade/i)) {
+  setPaint(m, id, 'fill-opacity', 0);
+}
+
+
+      // 2) Buildings
+      if (has(id,/building/)){
+        if (t === 'fill'){
+          setPaint(m, id, 'fill-color', BLDG);
+          setPaint(m, id, 'fill-outline-color', OUTL);
+          setPaint(m, id, 'fill-opacity', 0.9);
+        } else if (t === 'line'){
+          setPaint(m, id, 'line-color', OUTL);
+          setPaint(m, id, 'line-width', 0.6);
+        }
+      }
+
+      // 3) Water everywhere
+      if (has(id,/^(water|waterway)/)){
+        if (t === 'fill'){
+          setPaint(m, id, 'fill-color', WATER);
+          setPaint(m, id, 'fill-opacity', 1);
+        } else if (t === 'line'){
+          setPaint(m, id, 'line-color', WATER);
+          setPaint(m, id, 'line-opacity', 1);
+        }
+      }
+
+      // 4) Labels/icons — dark slate text + white halo for readability
+      if (t === 'symbol'){
+        setPaint(m, id, 'text-color', TEXT);
+        setPaint(m, id, 'icon-color', TEXT);
+        try{
+          setPaint(m, id, 'text-halo-color', '#ffffff');
+          setPaint(m, id, 'text-halo-width', 1.1);
+        }catch(_){}
+      }
+
+      // 5) Roads — make them light and friendly (no black roads)
+      if (t === 'line' && has(id,/^road-/)) {
+        // Default road look
+        setPaint(m, id, 'line-color', ROAD);
+        // keep whatever width Mapbox uses (we're just recolouring)
+        // we could gently fatten but it's optional
+      }
+
+      // Motorways / trunk / primary — give them a bit more weight + warm outline
+      if (t === 'line' && has(id,/(motorway|trunk|primary)/)) {
+        setPaint(m, id, 'line-color', ROAD);
+        setPaint(m, id, 'line-width', [
+          'interpolate', ['linear'], ['zoom'],
+          5, 1.5,
+          10, 3,
+          14, 5,
+          16, 7
+        ]);
+        // Some styles use separate casing layers, but we can try outline here
+        try {
+          setPaint(m, id, 'line-gap-width', 0);
+          setPaint(m, id, 'line-outline-color', ROAD_OUTLINE);
+        } catch(e){}
+      }
+
+      // 6) Rails / airports — keep subdued so roads & pins pop
+      if (t === 'line' && has(id,/(rail|railway|aeroway|runway|airport)/i)){
+        setPaint(m, id, 'line-color', OUTL);
+        setPaint(m, id, 'line-opacity', 0.55);
+      }
+    });
+
+    // Flatter look: remove fog if present
+    try{ m.setFog(null); }catch(_){}
+  }
+
+  // Boot + re-apply on style reloads
+  (function boot(tries=0){
+    const m = mapInst();
+    if (!m || typeof m.getStyle !== 'function'){
+      if (tries > 200) return;
+      setTimeout(()=>boot(tries+1), 60);
+      return;
+    }
+    const apply = ()=> recolor(m);
+    if (m.isStyleLoaded && !m.isStyleLoaded()){
+      m.once('styledata', apply);
+    } else {
+      apply();
+    }
+    m.on('styledata', apply);
+  })();
+})();
+
+/* Ticary — soften/remove road casings (white outlines on main roads) */
+(function(){
+  if (window.__tcRoadCasingTrim) return; window.__tcRoadCasingTrim = true;
+
+  // Tune these:
+  const CASING_OPACITY = 0.12;               // 0 = remove, 0.1–0.2 = subtle
+  const CASING_COLOR   = 'rgba(0,0,0,0.25)'; // replace bright white with soft dark
+
+  function getMap(){
+    return window.__asMap || window.map || window.asMap || window.MAP || null;
+  }
+  function setPaint(m,id,p,v){ try{ m.setPaintProperty(id,p,v); }catch(e){} }
+
+  function tameCasings(m){
+    const style = m.getStyle && m.getStyle();
+    if (!style || !style.layers) return;
+    style.layers.forEach(l=>{
+      const id = l.id || ''; const t = l.type;
+      // Many Mapbox styles name these like:
+      // road-primary-case, road-secondary-tertiary-case, road-motorway-trunk-case,
+      // bridge-primary-case, tunnel-motorway-trunk-case, etc.
+      if (t==='line' && /(road|bridge|tunnel).*?-case\b/i.test(id)){
+        // Option A: make them very subtle
+        setPaint(m, id, 'line-color', CASING_COLOR);
+        setPaint(m, id, 'line-opacity', CASING_OPACITY);
+        // If the style exposes casing width, give it a tiny nudge down
+        try{
+          const w = m.getPaintProperty(id, 'line-width');
+          if (typeof w === 'number') setPaint(m, id, 'line-width', Math.max(0, w * 0.7));
+        }catch(_){}
+      }
+    });
+  }
+
+  (function boot(tries=0){
+    const m = getMap();
+    if (!m || !m.getStyle){ if (tries>200) return; return setTimeout(()=>boot(tries+1), 60); }
+    const apply = ()=> tameCasings(m);
+    if (m.isStyleLoaded && !m.isStyleLoaded()){ m.once('styledata', apply); } else { apply(); }
+    m.on('styledata', apply); // re-apply after any setStyle() / style reload
+  })();
+})();
+
+(function () {
+  function isMobile() {
+    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function closeFiltersForMobile() {
+    const body = document.body;
+    if (!body) return;
+    // Hide filters overlay
+    body.classList.add('as-no-filters');
+    // In case any older class is still in use, clear it too (harmless if not)
+    body.classList.remove('as-mobile-filters-open');
+  }
+
+  function scrollToResults() {
+    const list =
+      document.querySelector('#as-list') ||
+      document.querySelector('.as-list') ||
+      document.querySelector('.w-dyn-list');
+    if (!list) return;
+
+    const rect = list.getBoundingClientRect();
+    const target = rect.top + window.scrollY - 64; // small offset under header
+    window.scrollTo({ top: target, behavior: 'smooth' });
+  }
+
+  function wireApplyButtons() {
+    const scope = document.getElementById('as-filters-body') || document;
+    const buttons = scope.querySelectorAll('#asf-apply, #asf-apply-top, .asf-apply');
+
+    buttons.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          if (!isMobile()) return;
+          // Let existing apply logic run first
+          setTimeout(() => {
+            closeFiltersForMobile();
+            scrollToResults();
+          }, 80);
+        },
+        { passive: true }
+      );
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireApplyButtons);
+  } else {
+    wireApplyButtons();
+  }
+})();
+
+(function(){
+  if (window.__tcFavCleanSyncV1) return;
+  window.__tcFavCleanSyncV1 = 1;
+
+  const API = "https://vehicle-api-espm.onrender.com";
+  const FAV_KEY = "as:favs";
+
+  const loadFavs = () => {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY) || "[]"); }
+    catch { return []; }
+  };
+
+  const saveFavs = (ids) => {
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(ids)); }
+    catch {}
+  };
+
+  async function getToken(){
+    try{
+      const sb = window.sb;
+      if (!sb?.auth?.getSession) return null;
+      const { data } = await sb.auth.getSession();
+      return data?.session?.access_token || null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  async function syncToServer(on, vehicle_id){
+    if (!vehicle_id) return;
+
+    const token = await getToken();
+    if (!token) return;
+
+    try{
+      await fetch(`${API}/me/favourites/${vehicle_id}`, {
+        method: on ? "POST" : "DELETE",
+        headers: { Authorization: "Bearer " + token }
+      });
+    }catch(e){
+      console.warn("Fav sync failed", e);
+    }
+  }
+
+  // Heart click -> sync to Neon
+  document.addEventListener("click", function(e){
+    const btn = e.target.closest(".as-fav-btn");
+    if (!btn) return;
+
+    const card = btn.closest(".as-card");
+    if (!card) return;
+
+    const vehicle_id = Number(card.dataset.vehicleId || 0);
+    if (!vehicle_id) return;
+
+    setTimeout(() => {
+      const on = btn.getAttribute("aria-pressed") === "true";
+      syncToServer(on, vehicle_id);
+    }, 0);
+  }, true);
+
+  // Hydrate from Neon on page load
+  async function hydrate(){
+    const token = await getToken();
+    if (!token) return;
+
+    try{
+      const res = await fetch(`${API}/me/favourites`, {
+        headers: { Authorization: "Bearer " + token }
+      });
+
+      if (!res.ok) return;
+      const data = await res.json();
+      const serverIds = Array.isArray(data?.vehicle_ids) ? data.vehicle_ids : [];
+
+      if (!serverIds.length) return;
+
+      const cards = document.querySelectorAll(".as-card");
+      const urlSet = new Set(loadFavs());
+
+      cards.forEach(card => {
+        const vid = Number(card.dataset.vehicleId || 0);
+        if (!vid) return;
+
+        if (serverIds.includes(vid)){
+          const btn = card.querySelector(".as-fav-btn");
+          if (btn) btn.setAttribute("aria-pressed", "true");
+
+          if (card.dataset.url){
+            urlSet.add(card.dataset.url);
+          }
+        }
+      });
+
+      saveFavs([...urlSet]);
+
+      if (typeof window.updateFavsPanel === "function"){
+        window.updateFavsPanel();
+      }
+
+    }catch(e){}
+  }
+
+  setTimeout(hydrate, 600);
+
+})();

@@ -804,3 +804,169 @@ console.log("✅ popup.js loaded (GitHub)");
   });
 
 })();
+
+/* =========================================================
+   Back to details button (always visible in map mode)
+========================================================= */
+(function(){
+  if (window.__tcdm_mapback_v4) return;
+  window.__tcdm_mapback_v4 = 1;
+
+  const $ = (s,r=document)=>r.querySelector(s);
+  const modal = document.getElementById('tcdm');
+  const right = document.getElementById('tcdm-right');
+  if (!modal || !right) return;
+
+  let wrap = right.querySelector('.tcdm-mapBackWrap');
+  if (!wrap){
+    wrap = document.createElement('div');
+    wrap.className = 'tcdm-mapBackWrap';
+    wrap.style.display = 'none';
+    wrap.style.padding = '0 0 14px 0';
+    right.prepend(wrap);
+  }
+
+  let btn = document.getElementById('tcdm-mapBackBtn');
+  if (!btn){
+    btn = document.createElement('button');
+    btn.id = 'tcdm-mapBackBtn';
+    btn.type = 'button';
+    btn.textContent = '← Back to details';
+    btn.style.width = '100%';
+    btn.style.display = 'flex';
+    btn.style.justifyContent = 'center';
+    btn.style.alignItems = 'center';
+    btn.style.padding = '14px 14px';
+    btn.style.borderRadius = '14px';
+    btn.style.background = 'rgba(63,177,206,.22)';
+    btn.style.border = '1px solid rgba(63,177,206,.60)';
+    btn.style.color = 'var(--tc-text)';
+    btn.style.fontWeight = '950';
+    btn.style.cursor = 'pointer';
+    wrap.appendChild(btn);
+
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); 
+      e.stopPropagation();
+      const t = $('#tcdm-mapToggle');
+      if (t) t.click();
+    }, true);
+  }
+
+  const sync = () => {
+    const on = modal.classList.contains('is-map-open');
+    wrap.style.display = on ? 'block' : 'none';
+  };
+
+  sync();
+  new MutationObserver(sync).observe(modal, {attributes:true, attributeFilter:['class']});
+})();
+
+/* =========================================================
+   Nested scroll handoff
+========================================================= */
+(function(){
+  if (window.__tcdm_scroll_handoff_v1) return;
+  window.__tcdm_scroll_handoff_v1 = 1;
+
+  function attach(){
+    const pane = document.getElementById('tcdm-paneContainer');
+    if (!pane) return;
+
+    const modal = document.getElementById('tcdm');
+    if (!modal) return;
+
+    modal.addEventListener('wheel', function(e){
+      const box = e.target && e.target.closest ? e.target.closest('.tcdm-scroll') : null;
+      if (!box) return;
+
+      if (!pane || pane.offsetParent === null) return;
+
+      const deltaY = e.deltaY || 0;
+      if (!deltaY) return;
+
+      const atTop = box.scrollTop <= 0;
+      const atBottom = (box.scrollTop + box.clientHeight) >= (box.scrollHeight - 1);
+
+      if (deltaY < 0 && !atTop) return;
+      if (deltaY > 0 && !atBottom) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      pane.scrollTop += deltaY;
+    }, { passive:false });
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', attach, { once:true });
+  } else {
+    attach();
+  }
+})();
+
+/* =========================================================
+   Lock modal heights to left column
+========================================================= */
+(function(){
+  if (window.__tcdm_lock_heights_v1) return;
+  window.__tcdm_lock_heights_v1 = 1;
+
+  const $ = (s,r=document)=>r.querySelector(s);
+
+  function lock(){
+    const overlay = $('#tcdm-overlay');
+    const modal   = $('#tcdm');
+    if (!overlay || !modal) return;
+
+    if (!overlay.classList.contains('is-open')) return;
+    if (modal.classList.contains('is-map-open')) return;
+
+    const left = $('#tcdm-left');
+    const cta  = $('#tcdm-ctaBar');
+    if (!left || !cta) return;
+
+    const leftH = Math.floor(left.getBoundingClientRect().height || 0);
+    if (leftH < 240) return;
+
+    const cap = Math.floor(Math.min(window.innerHeight * 0.92, 980));
+    const modalH = Math.max(320, Math.min(leftH, cap));
+
+    const ctaH = Math.floor(cta.getBoundingClientRect().height || 0);
+    const rightPadding = 32;
+    const rightGap = 12;
+    const paneMax = Math.max(220, modalH - ctaH - rightPadding - rightGap);
+
+    modal.style.setProperty('--tcdm-lock-h', modalH + 'px');
+    modal.style.setProperty('--tcdm-pane-max', paneMax + 'px');
+  }
+
+  function burst(){
+    lock();
+    setTimeout(lock, 50);
+    setTimeout(lock, 150);
+    setTimeout(lock, 350);
+    setTimeout(lock, 700);
+  }
+
+  const overlay = document.getElementById('tcdm-overlay');
+  const modal   = document.getElementById('tcdm');
+
+  if (overlay){
+    new MutationObserver(burst).observe(overlay, { attributes:true, attributeFilter:['class'] });
+  }
+  if (modal){
+    new MutationObserver(burst).observe(modal, { attributes:true, attributeFilter:['class'] });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.tcdm-tab')) burst();
+  }, true);
+
+  window.addEventListener('resize', () => setTimeout(burst, 60), { passive:true });
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', burst, { once:true });
+  } else {
+    burst();
+  }
+})();

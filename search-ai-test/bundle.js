@@ -2491,3 +2491,150 @@ window.__ticaryApply = function () {
   })(0);
 
 })();
+
+(function tcVariantUX(tries){
+  tries = tries || 0;
+  if (window.__tcVariantUXInit) return;
+
+  var makeSel  = document.getElementById('asf-make');
+  var modelSel = document.getElementById('asf-model');
+  var trimInp  = document.getElementById('asf-trim');
+
+  if (!makeSel || !modelSel || !trimInp) {
+    if (tries > 60) return;
+    return setTimeout(function(){ tcVariantUX(tries + 1); }, 100);
+  }
+
+  window.__tcVariantUXInit = true;
+
+    var examplesByMake = {
+    'BMW':           ['M Sport', 'M140i', 'M340i', '330e M Sport'],
+    'Audi':          ['S line', 'Black Edition', 'S3', 'RS3'],
+    'Mercedes-Benz': ['AMG Line', 'C43 AMG', 'Premium Plus', 'Night Edition'],
+    'Volkswagen':    ['R-Line', 'GTI', 'R', 'Match'],
+    'Porsche':       ['Carrera S', 'Turbo', 'Turbo S', 'GTS'],
+    'Ford':          ['ST-Line', 'ST-3', 'Titanium', 'Vignale'],
+    'Vauxhall':      ['SRi', 'Griffin', 'Elite Nav', 'GS Line'],
+    'Toyota':        ['Icon', 'Icon Tech', 'Design', 'GR Sport'],
+    'Nissan':        ['N-Connecta', 'Tekna', 'Acenta Premium'],
+    'Hyundai':       ['Premium', 'N Line', 'SE Connect', 'Ultimate'],
+    'Kia':           ['GT-Line', 'GT-Line S', '3', '4'],
+    'Peugeot':       ['Allure', 'GT Line', 'Active Premium', 'GT'],
+    'Citroen':       ['Shine', 'Shine Plus', 'Feel', 'C-Series'],
+    'Renault':       ['Iconic', 'RS Line', 'GT Line', 'R.S.'],
+    'SEAT':          ['FR', 'FR Sport', 'XCELLENCE', 'Cupra'],
+    'Škoda':         ['SE', 'SE L', 'SportLine', 'vRS'],
+    'Skoda':         ['SE', 'SE L', 'SportLine', 'vRS'], // safety duplicate
+    'MINI':          ['Cooper', 'Cooper S', 'John Cooper Works'],
+    'Land Rover':    ['HSE', 'HSE Dynamic', 'Autobiography', 'R-Dynamic'],
+    'Range Rover':   ['HSE', 'Vogue', 'Autobiography', 'SVR'],
+    'Volvo':         ['R-Design', 'Inscription', 'Momentum'],
+    'Jaguar':        ['R-Sport', 'R-Dynamic', 'Portfolio', 'SVR'],
+    'Honda':         ['Sport', 'SR', 'EX', 'Type R'],
+    'Mazda':         ['Sport Nav', 'GT Sport', 'SE-L Nav'],
+    'Lexus':         ['F Sport', 'Premium Pack', 'Takumi'],
+    'Fiat':          ['Lounge', 'Pop', 'Sport', 'Dolcevita'],
+    'Abarth':        ['595 Competizione', '595 Turismo', '695'],
+    'Alfa Romeo':    ['Veloce', 'Ti', 'Quadrifoglio'],
+    'Dacia':         ['Essential', 'Comfort', 'Prestige'],
+    'Suzuki':        ['SZ-T', 'SZ5', 'Sport'],
+    'MG':            ['Exclusive', 'Excite', 'Trophy'],
+    'Jeep':          ['Limited', 'Trailhawk', 'Night Eagle'],
+    'Tesla':         ['Long Range', 'Performance', 'Plaid'],
+    'Cupra':         ['VZ2', 'VZ3', 'VZ Edition'],
+    'DS':            ['Performance Line', 'Rivoli', 'Opera'],
+    'Subaru':        ['Premium', 'SE', 'STI'],
+    'Mitsubishi':    ['Juro', 'Exceed', '4hs'],
+    'Smart':         ['Prime Premium', 'Pulse', 'Passion']
+  };
+
+  var defaultExamples = ['M Sport', 'GT Line', 'R-Line', 'Turbo S'];
+
+
+  var timer = null;
+  var list  = defaultExamples;
+  var idx   = 0;
+  var pos   = 0;
+
+  function stopTyping() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function startTyping() {
+    if (!trimInp) return;
+    if (trimInp.disabled) return;
+    if (trimInp.value && trimInp.value.trim()) return;
+
+    var make = makeSel.value || '';
+    list = examplesByMake[make] || defaultExamples;
+    if (!list.length) return;
+
+    stopTyping();
+    idx = 0;
+    pos = 0;
+
+    timer = setInterval(function(){
+      if (!trimInp) { stopTyping(); return; }
+      if (trimInp.disabled) { stopTyping(); return; }
+      if (trimInp.value && trimInp.value.trim()) { stopTyping(); return; }
+
+      var phrase = list[idx] || '';
+      var prefix = 'e.g. ';
+      var pause  = 4; // a few extra ticks at the end
+      var total  = phrase.length + pause;
+
+      if (pos <= phrase.length) {
+        trimInp.placeholder = prefix + phrase.slice(0, pos);
+      } else if (pos > total) {
+        idx = (idx + 1) % list.length;
+        pos = 0;
+        return;
+      }
+      pos++;
+    }, 120);
+  }
+
+  // When make changes, reset hint
+  makeSel.addEventListener('change', function(){
+    stopTyping();
+    if (trimInp) {
+      // Part B still controls disabled state – we just reset the placeholder
+      trimInp.placeholder = 'Variant keyword';
+    }
+  });
+
+  // When model changes, start hint if make+model selected and input is enabled/empty
+  modelSel.addEventListener('change', function(){
+    stopTyping();
+    if (!trimInp) return;
+    if (makeSel.value && modelSel.value && !trimInp.disabled && !(trimInp.value && trimInp.value.trim())) {
+      startTyping();
+    }
+  });
+
+  // If user types, kill the animation
+  trimInp.addEventListener('input', function(){
+    if (trimInp.value && trimInp.value.trim()) {
+      stopTyping();
+    }
+  });
+
+  // On focus, if they’ve already typed, stop
+  trimInp.addEventListener('focus', function(){
+    if (trimInp.value && trimInp.value.trim()) {
+      stopTyping();
+    }
+  });
+
+  // On blur, if still empty and unlocked, restart hint
+  trimInp.addEventListener('blur', function(){
+    if (!trimInp.value || !trimInp.value.trim()) {
+      if (!trimInp.disabled && makeSel.value && modelSel.value) {
+        startTyping();
+      }
+    }
+  });
+})();

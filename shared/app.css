@@ -1,1 +1,1831 @@
+:root{
+    --as-bg:#0b0f12;
+    --as-panel:#11161b;
+    --as-card:#161c22;
+    --as-text:#e8f0f5;
+    --as-dim:#9bb0bd;
+    --as-accent:#00b37d;
+    --as-accent-2:#2aa0ff;
+  }
+
+  /* Light theme overrides */
+  :root[data-theme="light"]{
+    --as-bg:#f4f5f7;
+    --as-panel:#ffffff;
+    --as-card:#ffffff;
+    --as-text:#11161b;
+    --as-dim:#5c6b7a;
+    --as-accent:#007a4a;
+    --as-accent-2:#1b7fd9;
+  }
+
+  /* Light-mode surfaces */
+  :root[data-theme="light"] body{
+    background:var(--as-bg);
+    color:var(--as-text);
+  }
+
+  /* FILTER PANELS (the dark boxes in your screenshot) */
+  :root[data-theme="light"] .as-filter-body{
+    background:#ffffff;
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow:0 6px 18px rgba(15,20,24,.06);
+  }
+
+  /* VEHICLE CARDS */
+  :root[data-theme="light"] .as-card{
+    background:#ffffff;
+    border-color:rgba(0,0,0,.08);
+    box-shadow:0 10px 26px rgba(15,20,24,.08);
+  }
+
+  :root[data-theme="light"] .as-thumb{
+    background:#dde2e8;
+  }
+
+  /* NEW LIST TOOLBAR */
+  :root[data-theme="light"] .as-listbar-new{
+    background:var(--as-panel);
+    border:1px solid rgba(0,0,0,.06);
+  }
+
+  /* FILTER INPUTS & SELECTS */
+  :root[data-theme="light"] .asf input,
+  :root[data-theme="light"] .asf select,
+  :root[data-theme="light"] .asf textarea,
+  :root[data-theme="light"] .asf .w-input,
+  :root[data-theme="light"] .asf .w-select{
+    background:#ffffff;
+    border-color:rgba(0,0,0,.14);
+    color:#11161b;
+  }
+
+  :root[data-theme="light"] #asf-use-loc{
+    background:#ffffff;
+    border-color:rgba(0,0,0,.14);
+    color:#11161b;
+  }
+
+  *{box-sizing:border-box}
+
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--as-bg);
+    color:var(--as-text);
+    font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    font-size:16px;
+    line-height:1.6;
+  }
+
+  /* Layout shell (no grid enforcement here) */
+  .as-wrap{padding:min(3vw,32px)}
+  .as-grid{
+    display:grid;
+    grid-template-columns:minmax(260px,340px) 1fr;
+    gap:clamp(16px,2vw,24px);
+    align-items:start;
+    max-width:2000px;
+    margin-inline:auto;
+  }
+  @media (min-width:1600px){
+    .as-grid{grid-template-columns:minmax(300px,380px) 1fr}
+  }
+
+  /* Left panel */
+  .as-filter{position:sticky;top:16px;align-self:start}
+  .as-filter-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .as-filter-title{font-weight:600;letter-spacing:.2px}
+  .as-count-badge{
+    font:500 12px/1.6 system-ui,-apple-system,Segoe UI;
+    background:linear-gradient(90deg,var(--as-accent) 0%,var(--as-accent-2) 100%);
+    -webkit-background-clip:text;color:transparent;white-space:nowrap
+  }
+  .as-filter-body{
+    background:var(--as-panel);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 6px 24px rgba(0,0,0,.25) inset,0 8px 24px rgba(0,0,0,.2)
+  }
+
+  /* Right side scaffolding (no map canvas rules here) */
+  .as-main{display:flex;flex-direction:column;gap:clamp(12px,1.6vw,20px)}
+  .as-mapwrap{
+    background:var(--as-panel);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:16px;
+    overflow:hidden;
+  }
+  .as-map{width:100%;height:auto} /* height handled by Step-5 to avoid conflicts */
+
+  /* Toolbar */
+  .as-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;justify-content:space-between;padding:10px 0}
+  .as-tool-left,.as-tool-right{display:flex;align-items:center;gap:10px}
+  .as-tool-right{margin-left:auto}
+  #as-sort{
+    background:var(--as-panel);
+    border:1px solid rgba(255,255,255,.12);
+    padding:8px 10px;border-radius:10px;color:var(--as-text);
+  }
+  #as-map-toggle,#as-fav-toggle,#as-more{
+    background:transparent;border:1px solid rgba(255,255,255,.18);
+    padding:10px 12px;border-radius:12px;color:var(--as-text);cursor:pointer
+  }
+  #as-map-toggle:hover,#as-fav-toggle:hover,#as-more:hover{border-color:rgba(255,255,255,.35)}
+
+  /* Card skin (no price visibility rules here; Step-5 controls the bubble/row) */
+  .as-card{
+    background:var(--as-card);
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.06);
+    display:flex;flex-direction:column;position:relative
+  }
+   
+  .as-body{display:flex;flex-direction:column;padding:12px;gap:6px}
+  .as-title{font-weight:700;font-size:1.15rem !important;}
+  .as-sub{opacity:.9;font-size:1rem;display:flex;gap:.5rem;flex-wrap:wrap}
+  .as-cta{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);text-decoration:none;color:var(--as-text);margin-top:auto;font-size:1.05rem !important;}
+  .as-cta:hover{border-color:rgba(255,255,255,.35)}
+
+/* === Card layout fixes (pure CSS; no JS or big-embed edits) === */
+
+/* 1) Title stack: make + model stay on line 1; trim becomes a new line under them */
+.as-title{
+  display:flex;
+  flex-wrap:wrap;                 /* lets trim wrap to its own line */
+  gap:6px 8px;
+}
+.as-title .as-trim{
+  display:block;                  /* forces a new line within .as-title */
+  flex-basis:100%;
+  order:2;                        /* ensure it's below make/model */
+  font-weight:500;
+  font-size:.85rem;
+  opacity:.9;
+  margin-top:2px;
+}
+
+/* 2) Hide any visible colour text on the card (filters still read the hidden spans) */
+.as-color,
+.as-colour,
+.as-body [fs-list-field="colour"],
+.as-body [fs-list-field="color"]{
+  display:none !important;
+}
+
+/* 3) Finance per month pinned to the right on the Fuel • Gearbox row */
+.as-meta-b{
+  display:flex;
+  align-items:baseline;
+  gap:.5rem;
+}
+.as-finance-inline{
+  margin-left:auto;               /* push to the right */
+  white-space:nowrap;
+  font-weight:600;
+  color:#3fb1ce;                  /* your brand blue */
+}
+
+/* placeholder styling when there is no numeric finance */
+.as-finance-inline--fallback{
+  color: var(--as-dim);
+  font-weight:500;
+}
+
+/* hide truly empty finance cells */
+.as-finance-inline:empty{
+  display:none;
+}
+
+/* only add £ and " / month" to REAL finance values */
+.as-finance-inline:not(:empty):not(.as-finance-inline--fallback)::before{
+  content:"£";
+}
+.as-finance-inline:not(:empty):not(.as-finance-inline--fallback)::after{
+  content:" / month";
+}
+
+
+/* one-line spacer for non-wrapping rows */
+.as-meta-b--pad { margin-bottom: 1.25em; }   /* tweak this value */
+
+/* Hide Trim visually on cards (kept in DOM for filters) */
+.as-trim{ display:none !important; }
+
+/* FINAL OVERRIDE: Edition should wrap and always have a 2-line slot */
+.as-card .as-line.as-edition{
+  display:block;
+  font-size:.9rem;
+  line-height:1.35;
+  opacity:.92;
+
+  /* Kill all the old single-line + ellipsis behaviour */
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+
+  /* Reserve 2 lines of vertical space so short editions get a "blank" second line */
+  min-height:calc(1.35em * 2);
+  margin-bottom:2px;
+}
+
+
+/* === NEW: Price pill borders === */
+.as-price-badge {
+  border: 1.5px solid #3FB1CE !important;
+}
+
+/* === NEW: Larger text across page === */
+.as-card .as-meta {
+  font-size: 1rem !important;
+}
+
+.as-card .as-line {
+  font-size: 1rem !important;
+}
+
+@media (min-width: 1200px) {
+  body {
+    font-size: 17px;
+  }
+  
+  .as-card .as-title {
+    font-size: 1.2rem !important;
+  }
+}
+
+/* Fuel • Gearbox + monthly finance row */
+.as-meta.as-meta-b{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+}
+
+/* Left side: Fuel • Gearbox can wrap */
+.as-meta.as-meta-b .as-fg{
+  flex:1 1 auto;
+  min-width:0;
+  white-space:normal;       /* allow wrapping */
+}
+
+/* Right side: monthly price stays pinned right, one line */
+.as-meta.as-meta-b .as-finance-inline{
+  flex:0 0 auto;
+  white-space:nowrap;       /* never wraps */
+  margin-left:8px;
+  text-align:right;
+}
+
+/* === Fuel / Gearbox on one line, monthly price on its own line === */
+.as-meta.as-meta-b{
+  display:block;
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid rgba(255,255,255,0.06); /* thin divider above the block */
+}
+
+/* Fuel • Gearbox */
+.as-meta.as-meta-b .as-fg{
+  display:block;
+  margin-bottom:4px;
+  white-space:normal;   /* allow wrapping: "Petrol Plug-In Hybrid • Automatic" can go to 2 lines */
+}
+
+/* Monthly price on its own line, right-aligned */
+.as-meta.as-meta-b .as-finance-inline{
+  display:block;
+  text-align:right;
+  white-space:nowrap;
+}
+
+/* Divider between edition and year/mileage */
+.as-meta.as-meta-a{
+  margin-top:6px;
+  padding-top:6px;
+  border-top:1px solid rgba(255,255,255,0.18); /* more visible line */
+}
+
+/* Fuel/Gearbox + finance block: clearer line, tighter spacing */
+.as-meta.as-meta-b{
+  display:block;
+  margin-top:4px;
+  padding-top:6px;
+  border-top:1px solid rgba(255,255,255,0.18); /* more visible line */
+}
+
+/* Fuel • Gearbox above */
+.as-meta.as-meta-b .as-fg{
+  display:block;
+  margin-bottom:2px;
+  white-space:normal;   /* so "Petrol Plug-In Hybrid • Automatic" can wrap */
+}
+
+/* Monthly finance: own line, left-aligned */
+.as-meta.as-meta-b .as-finance-inline{
+  display:block;
+  text-align:left;
+  white-space:nowrap;
+}
+
+/* === Tighten vertical spacing inside cards === */
+
+/* Year / mileage row */
+.as-meta.as-meta-a{
+  margin-top:3px;
+  padding-top:3px;
+  border-top:1px solid rgba(255,255,255,0.18);
+}
+
+/* Fuel/gearbox + finance block */
+.as-meta.as-meta-b{
+  margin-top:3px;
+  padding-top:4px;
+  border-top:1px solid rgba(255,255,255,0.18);
+}
+
+/* Fuel • Gearbox line */
+.as-meta.as-meta-b .as-fg{
+  margin-bottom:1px;
+  line-height:1.25;
+}
+
+/* Finance line */
+.as-meta.as-meta-b .as-finance-inline{
+  line-height:1.25;
+}
+
+/* === Fine-tune vertical spacing for meta rows === */
+
+/* Year / mileage row: less space before the line below */
+.as-meta.as-meta-a{
+  margin-top:2px;
+  padding-top:2px;
+  border-top:1px solid rgba(255,255,255,0.18);
+}
+
+/* Fuel/gearbox + finance block:
+   smaller gap from year/mileage to the line,
+   but a bit more padding from the line to the text */
+.as-meta.as-meta-b{
+  margin-top:1px;           /* tighter to the row above */
+  padding-top:6px;          /* more space from line to content */
+  border-top:1px solid rgba(255,255,255,0.18);
+}
+
+/* Fuel • Gearbox just above finance */
+.as-meta.as-meta-b .as-fg{
+  margin-bottom:2px;
+  line-height:1.25;
+}
+
+/* Finance: a little breathing room from the line above */
+.as-meta.as-meta-b .as-finance-inline{
+  display:block;
+  margin-top:5px;
+  line-height:1.25;
+}
+
+/* Make the card separator line visible on light theme */
+:root[data-theme="light"] .as-meta.as-meta-b{
+  border-top-color: rgba(0,0,0,0.08); /* subtle dark line on white cards */
+}
+
+
+/* Finance placeholder override */
+.as-finance-inline--fallback{
+  color: var(--as-dim);
+  font-weight: 500;
+}
+
+/* Keep hiding truly empty finance cells */
+.as-finance-inline:empty{
+  display: none;
+}
+
+/* Only add £ and " / month" when it's NOT a fallback */
+.as-finance-inline:not(:empty):not(.as-finance-inline--fallback)::before{
+  content: "£";
+}
+.as-finance-inline:not(:empty):not(.as-finance-inline--fallback)::after{
+  content: " / month";
+}
+
+
+  /* Light-mode filter boxes (the big dark panels) */
+  :root[data-theme="light"] .as-filter-body{
+    background:#ffffff;
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 8px 24px rgba(15,20,24,.06);
+  }
+
+  :root[data-theme="light"] .as-filter-head,
+  :root[data-theme="light"] .as-filter-title,
+  :root[data-theme="light"] .as-filter-body,
+  :root[data-theme="light"] .as-filter-body label{
+    color:var(--as-text);
+  }
+  /* Make vehicle images fill the thumb cleanly */
+  .as-thumb{
+    overflow:hidden;
+  }
+
+  /* Light mode CTA button */
+  :root[data-theme="light"] .as-cta{
+    background:var(--as-accent-2);
+    color:#ffffff;
+    border-color:var(--as-accent-2);
+  }
+
+  :root[data-theme="light"] .as-cta:hover{
+    filter:brightness(1.05);
+  }
+  
+  /* =========================================================
+   Vehicle card image: taller + wide-image support
+========================================================= */
+
+/* 1) Taller image slot (16/10 -> 16/12 ≈ +20% height) */
+.as-thumb{
+  aspect-ratio: 16/12 !important; /* change to 16/11.5 for ~15% instead */
+  position: relative;            /* needed for fade overlays */
+  overflow: hidden;
+  background-color:#0f1418;      /* matches your current dark thumb base */
+}
+
+/* Keep your default behaviour: most images still "cover" nicely */
+.as-thumb{
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+}
+.as-thumb img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+
+  /* === Light theme refinements === */
+
+  /* Distance filter panel + other filter bodies */
+  :root[data-theme="light"] .as-filter-body{
+    background:#ffffff;
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 8px 24px rgba(15,20,24,.06);
+    color:var(--as-text);
+  }
+
+  /* Distance row + +/- buttons */
+  :root[data-theme="light"] .asf-distance,
+  :root[data-theme="light"] .asf-distance-row{
+    background:#ffffff;
+  }
+
+  :root[data-theme="light"] .asf .asf-dist-step{
+    background:#ffffff;
+    border:1px solid rgba(0,0,0,.15);
+    color:#11161b;
+    box-shadow:0 2px 6px rgba(15,20,24,.12);
+  }
+
+  /* Dropdown list background (the actual option menu) */
+  :root[data-theme="light"] .asf select option,
+  :root[data-theme="light"] .asf select optgroup{
+    background-color:#ffffff;
+    color:#11161b;
+  }
+
+
+  /* View Details – pin blue (#3FB1CE) in light mode */
+  :root[data-theme="light"] .as-cta{
+    background:#3FB1CE;
+    border-color:#3FB1CE;
+    color:#ffffff;
+  }
+  :root[data-theme="light"] .as-cta:hover{
+    filter:brightness(1.05);
+  }
+    /* Light mode – all filter panels white */
+  :root[data-theme="light"] #asf-vehicle,
+  :root[data-theme="light"] #asf-distance,
+  :root[data-theme="light"] #asf-price,
+  :root[data-theme="light"] #asf-finance,
+  :root[data-theme="light"] #asf-more,
+  :root[data-theme="light"] #asf-year,
+  :root[data-theme="light"] #asf-mileage{
+    background:#ffffff !important;
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 8px 24px rgba(15,20,24,.06);
+    color:#11161b;
+  }
+
+
+  /* --- Light mode: View Details CTA in Ticary blue --- */
+  :root[data-theme="light"] .as-cta{
+    background:#3FB1CE;
+    border-color:#3FB1CE;
+    color:#ffffff;
+  }
+  :root[data-theme="light"] .as-cta:hover{
+    filter:brightness(1.05);
+  }
+  /* Card images – fill the frame nicely */
+  img.as-thumb{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+ 
+/* === Global dual-range sliders (price, finance, year, mileage, distance) === */
+
+.as-range{
+  position:relative;
+  height:34px;
+  display:block;
+}
+
+/* Native input track invisible; we draw our own bar */
+.as-range input[type="range"]{
+  -webkit-appearance:none;
+  appearance:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:8px;
+  height:18px;
+  margin:0;
+  background:transparent;
+  pointer-events:auto;
+}
+.as-range input[type="range"]::-webkit-slider-runnable-track{
+  height:6px;
+  background:transparent;
+}
+.as-range input[type="range"]::-moz-range-track{
+  height:6px;
+  background:transparent;
+}
+
+/* Thumb – your original blue dot */
+.as-range input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+.as-range input[type="range"]::-moz-range-thumb{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+
+/* Bar behind thumbs – dark so it’s visible on white */
+.as-range .as-range-track{
+  position:absolute;
+  left:0;
+  right:0;
+  top:16px;
+  height:6px;
+  border-radius:99px;
+  background:#222a33;
+  border:1px solid #2f3944;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* Filled segment between thumbs – blue gradient */
+.as-range .as-range-track::before{
+  content:"";
+  position:absolute;
+  top:-1px;
+  bottom:-1px;
+  left:var(--a,0%);
+  right:calc(100% - var(--b,100%));
+  background:linear-gradient(90deg,#3FB1CE,#1D8CFF);
+  border:1px solid #1D8CFF;
+  border-radius:inherit;
+}
+
+/* Thumbs always over the bar */
+.as-range input[type="range"]{
+  z-index:1;
+}
+.as-range input[type="range"].is-top{
+  z-index:2;
+}
+/* === Ticary dual-range sliders (same in light & dark) === */
+
+.as-range{
+  position:relative;
+  height:34px;
+  display:block;
+}
+
+/* Hide the native track – we draw our own bar */
+.as-range input[type="range"]{
+  -webkit-appearance:none;
+  appearance:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:8px;
+  height:18px;
+  margin:0;
+  background:transparent;
+  pointer-events:auto;
+}
+.as-range input[type="range"]::-webkit-slider-runnable-track{
+  height:6px;
+  background:transparent;
+}
+.as-range input[type="range"]::-moz-range-track{
+  height:6px;
+  background:transparent;
+}
+
+/* Thumb – same blue dot as before */
+.as-range input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+.as-range input[type="range"]::-moz-range-thumb{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+
+/* Bar – solid blue across the whole width */
+.as-range .as-range-track{
+  position:absolute;
+  left:0;
+  right:0;
+  top:16px;
+  height:6px;
+  border-radius:99px;
+  background:linear-gradient(90deg,#3FB1CE,#1D8CFF);
+  border:1px solid #1D8CFF;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* Kill the old "filled segment" logic – full bar is blue */
+.as-range .as-range-track::before{
+  content:none;
+}
+
+/* Thumbs always on top of the bar */
+.as-range input[type="range"]{
+  z-index:1;
+}
+.as-range input[type="range"].is-top{
+  z-index:2;
+}
+
+/* =========================================================
+   TICARY — Vehicle card thumbnails (FINAL, single source of truth)
+   Requirement: sides always fit, no lateral cropping.
+   Taller slot + fade top/bottom for letterbox.
+========================================================= */
+
+.as-thumb{
+  display:block;
+  width:100%;
+  aspect-ratio:16/12;              /* ~+20% height vs 16/10 */
+  position:relative;
+  overflow:hidden;
+
+  background-color: var(--as-thumb-bg, #0f1418);
+  background-position:center center;
+  background-repeat:no-repeat;
+
+  /* KEY: never crop the sides */
+  background-size:contain !important;
+}
+
+/* If your thumb is an <img> inside .as-thumb */
+.as-thumb img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain !important;   /* KEY: never crop the sides */
+  object-position:center;
+}
+
+/* Light theme: subtle off-white background for letterbox space */
+:root[data-theme="light"] .as-thumb{
+  background-color: #f1f3f5;  /* soft neutral off-white */
+}
+
+.ticary-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--as-bg, #05080b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.32s ease, visibility 0.32s ease;
+  }
+
+  .ticary-loader--hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .ticary-loader__inner {
+    padding: 20px 28px;
+    border-radius: 18px;
+    background: rgba(10, 14, 18, 0.94);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    text-align: center;
+    min-width: 220px;
+    max-width: 280px;
+  }
+
+  .ticary-loader__logo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--as-text, #e8f0f5);
+    margin-bottom: 10px;
+  }
+
+  .ticary-loader__logo span {
+    color: var(--as-accent-2, #3FB1CE);
+  }
+
+  .ticary-loader__spinner {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--as-accent-2, #3FB1CE);
+    animation: ticary-spin 0.8s linear infinite;
+    margin: 0 auto;
+  }
+
+  .ticary-loader__text {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--as-dim, #9bb0bd);
+    white-space: nowrap;
+  }
+
+  @keyframes ticary-spin {
+    to { transform: rotate(360deg); }
+  }
+    /* Light theme version of the loading overlay */
+  :root[data-theme="light"] .ticary-loader {
+    background: var(--as-bg, #f4f5f7);
+  }
+
+  :root[data-theme="light"] .ticary-loader__inner {
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  }
+
+  :root[data-theme="light"] .ticary-loader__logo {
+    color: var(--as-text, #11161b);
+  }
+
+  :root[data-theme="light"] .ticary-loader__logo span {
+    color: var(--as-accent-2, #1b7fd9);
+  }
+
+  :root[data-theme="light"] .ticary-loader__text {
+    color: var(--as-dim, #5c6b7a);
+  }
+
+  :root[data-theme="light"] .ticary-loader__spinner {
+    border-color: rgba(0, 0, 0, 0.06);
+    border-top-color: var(--as-accent-2, #1b7fd9);
+  }
+  
+  /* Mobile – hide active filter tags in the toolbar */
+@media (max-width: 768px){
+  .as-toolbar .as-tags,
+  .as-toolbar .as-tagbar,
+  .as-toolbar .as-tagstrip,
+  .as-toolbar [data-as-tags],
+  .as-toolbar [data-as-active-tags]{
+    display:none !important;
+  }
+}
+/* Mobile – hide the active filter tags strip */
+@media (max-width: 768px){
+  .as-filter-tags{
+    display:none !important;
+  }
+}
+/* Map-only view: bottom detail panel on mobile */
+@media (max-width: 768px){
+  body.as-embed-map .as-map-mobile-panel{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:9999;
+    background:var(--as-panel,#11161b);
+    border-top:1px solid rgba(15,23,42,0.7);
+    box-shadow:0 -12px 30px rgba(0,0,0,0.6);
+    padding:12px 16px 16px;
+    max-height:42vh;
+    overflow-y:auto;
+  }
+
+  /* Hide Mapbox’s own popups in this mode – we’ll use the panel instead */
+  body.as-embed-map .mapboxgl-popup{
+    display:none !important;
+  }
+}
+
+/* === OVERRIDE: edition behaviour – 2-line clamp, equal height, no hover cursor === */
+
+/* Let the wrapper behave like a normal block; no clipping here */
+.as-edition-wrap {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Edition text: up to 2 lines, truncated if longer.
+   Short editions still reserve space for 2 lines so card heights match. */
+.as-edition {
+  opacity: .92;
+  font-size: .9rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;          /* clamp at 2 lines */
+  overflow: hidden;
+  max-height: calc(1.35em * 2 + 2px);
+  min-height: calc(1.35em * 2 + 2px);  /* force the “blank line” for short editions */
+  cursor: default !important;
+}
+
+/* Kill the old hover bubble / question-mark behaviour completely */
+.as-edition[data-full] {
+  cursor: default !important;
+}
+.as-edition[data-full]::after {
+  content: none !important;
+}
+
+/* Mobile – card under the map (just styling) */
+@media (max-width: 768px){
+  .as-map-mobile-panel{
+    margin-top:8px;
+    background:var(--as-panel);
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.12);
+    padding:12px 14px;
+  }
+
+  :root[data-theme="light"] .as-map-mobile-panel{
+    border-color:rgba(0,0,0,.08);
+    box-shadow:0 8px 24px rgba(15,20,24,.06);
+  }
+
+  .as-map-mobile-panel .as-pop{
+    box-shadow:none;
+    border:none;
+    background:transparent;
+    padding:0;
+  }
+}
+
+/* === MOBILE: remove map entirely (UI only) === */
+@media (max-width: 768px){
+
+  /* Hide the map toggle buttons in the toolbar */
+  #as-map-toggle,
+  #as-map-toggle-new,
+  #as-map-inline-toggle {
+    display: none !important;
+  }
+
+  /* Hide the map block itself */
+  .as-mapwrap,
+  #as-map {
+    display: none !important;
+  }
+}
+
+/* MOBILE – lock filters drawer to viewport, no sideways dragging */
+@media (max-width: 768px){
+  body.as-mobile-filters-open #as-filters,
+  body.as-mobile-filters-open #as-filters-body{
+    max-width: 100vw !important;
+    width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    overflow-x: hidden !important;
+    touch-action: pan-y !important;  /* only vertical scroll */
+  }
+
+  body.as-mobile-filters-open .as-col--filters{
+    max-width: 100vw !important;
+    width: 100vw !important;
+  }
+}
+
+/* MOBILE – nice light-theme header for filters drawer */
+@media (max-width: 768px){
+  :root[data-theme="light"] body.as-mobile-filters-open #as-filters,
+  :root[data-theme="light"] body.as-mobile-filters-open #as-filters-body{
+    background: #f4f5f7 !important;
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-head{
+    background: #ffffff !important;
+    color: #11161b !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-title{
+    color: #11161b !important;
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-close{
+    background: #ffffff !important;
+    color: #11161b !important;
+    border-color: rgba(0,0,0,0.12) !important;
+  }
+}
+
+/* =========================================================
+   TICARY – Full-bleed “slotted together” layout (Homepage/Search)
+   Paste at VERY END of page custom code - head.txt
+   ========================================================= */
+
+.as-wrap{
+  padding: 0 !important;            /* kill outer gutters */
+}
+
+.as-grid{
+  gap: 0 !important;                /* filters + main touch */
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+/* Right column: remove vertical gaps between map / toolbar / list */
+.as-main{
+  gap: 0 !important;
+}
+
+/* FILTERS block becomes a straight-edged panel */
+.as-filter{ top: 0 !important; }    /* optional: keeps it tight to the top */
+.as-filter-body{
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  /* keep a divider between filters and main */
+  border-right: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: none !important;
+}
+
+/* Light theme divider */
+:root[data-theme="light"] .as-filter-body{
+  border-right-color: rgba(0,0,0,.10) !important;
+  border-color: rgba(0,0,0,.10) !important;
+}
+
+/* MAP block becomes full-width, square-edged */
+.as-mapwrap{
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
+
+/* TOOLBAR sits flush like a “row” between map and results */
+.as-toolbar{
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  background: var(--as-panel) !important;
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+}
+
+:root[data-theme="light"] .as-toolbar{
+  border-top-color: rgba(0,0,0,.10) !important;
+  border-bottom-color: rgba(0,0,0,.10) !important;
+}
+
+/* RESULTS LIST AREA: remove any “panel gap” feeling */
+#vehicles-list-wrapper{
+  margin-top: 0 !important;
+}
+
+/* If you truly want *everything* square (cards too): */
+.as-card,
+.as-thumb{
+  border-radius: 0 !important;
+}
+
+/* Mobile: also remove rounding on the mobile map panel if it’s used */
+@media (max-width: 768px){
+  .as-map-mobile-panel{
+    border-radius: 0 !important;
+  }
+}
+/* =========================================================
+   TICARY – List toolbar (as-listbar-new) flush + square
+   ========================================================= */
+
+/* Kill spacing above & below */
+.as-listbar-new{
+  margin: 0 !important;
+  padding: 12px 16px !important;
+
+  border-radius: 0 !important;
+  box-shadow: none !important;
+
+  /* Make it feel like a “slot” between map & results */
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+
+  background: var(--as-panel) !important;
+}
+
+/* Light theme divider colours */
+:root[data-theme="light"] .as-listbar-new{
+  border-top-color: rgba(0,0,0,.10) !important;
+  border-bottom-color: rgba(0,0,0,.10) !important;
+}
+
+/* Some layouts wrap it — kill wrapper spacing too */
+.as-listbar-new-wrap,
+.as-listbar-wrap{
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* =========================================================
+   TICARY – Remove gap between MAP and LIST BAR
+   ========================================================= */
+
+/* Kill any margin/padding on map containers */
+.as-mapwrap,
+.as-map,
+.as-map-inner,
+.as-map-container{
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Mapbox injects its own wrappers */
+.mapboxgl-map,
+.mapboxgl-canvas-container,
+.mapboxgl-canvas{
+  display: block !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* If a ratio spacer div exists (very common) */
+.as-mapwrap::after,
+.as-map-inner::after{
+  content: none !important;
+  display: none !important;
+}
+
+/* Some layouts give the map a min-height buffer */
+.as-mapwrap{
+  min-height: 0 !important;
+}
+
+/* Absolute guarantee: toolbar hugs the map */
+.as-listbar-new{
+  margin-top: 0 !important;
+}
+
+/* =========================================================
+   TICARY – AI Search button (static, premium, theme-aware)
+========================================================= */
+
+#tc-header .tc-header-nav a.tc-ai-btn{
+  position: relative !important;
+  isolation: isolate;
+  overflow: visible !important;
+
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  height: 44px !important;
+  padding: 0 18px !important;
+
+  /* Less rounded – matches Ticary UI language */
+  border-radius: 12px !important;
+
+  font-weight: 900 !important;
+  letter-spacing: .01em !important;
+  text-decoration: none !important;
+
+  /* Base depth */
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.18),
+    inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+/* -----------------------------
+   DARK THEME
+------------------------------ */
+:root:not([data-theme="light"])
+#tc-header .tc-header-nav a.tc-ai-btn{
+  background:
+    linear-gradient(180deg,
+      rgba(26,34,48,.95),
+      rgba(16,22,34,.95)
+    ) !important;
+
+  color: #ffffff !important;
+
+  border: 1px solid rgba(63,177,206,.55) !important;
+}
+
+/* Off-centre white back-light (dark) */
+:root:not([data-theme="light"])
+#tc-header .tc-header-nav a.tc-ai-btn::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  pointer-events:none;
+
+  left: 65%;
+  top: 35%;
+  transform: translate(-50%, -50%);
+
+  width: 140%;
+  height: 160%;
+  border-radius: 18px;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255,255,255,.45),
+    rgba(255,255,255,.16) 35%,
+    rgba(255,255,255,0) 70%
+  );
+
+  filter: blur(12px);
+  opacity: .85;
+}
+
+/* Inner glow + surface highlight (dark) */
+:root:not([data-theme="light"])
+#tc-header .tc-header-nav a.tc-ai-btn::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius: inherit;
+  pointer-events:none;
+  z-index:0;
+
+  background:
+    radial-gradient(120px 70px at 30% 25%,
+      rgba(255,255,255,.18),
+      transparent 60%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(255,255,255,.12),
+      transparent 40%
+    );
+}
+
+/* -----------------------------
+   LIGHT THEME
+------------------------------ */
+:root[data-theme="light"]
+#tc-header .tc-header-nav a.tc-ai-btn{
+  background:
+    linear-gradient(180deg,
+      #ffffff,
+      #f3f6fa
+    ) !important;
+
+  color: #0f172a !important;
+
+  border: 1px solid rgba(15,23,42,.14) !important;
+
+  box-shadow:
+    0 10px 26px rgba(15,23,42,.12),
+    inset 0 0 0 1px rgba(255,255,255,.75);
+}
+
+/* Back-light (light mode – more restrained) */
+:root[data-theme="light"]
+#tc-header .tc-header-nav a.tc-ai-btn::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  pointer-events:none;
+
+  left: 60%;
+  top: 35%;
+  transform: translate(-50%, -50%);
+
+  width: 130%;
+  height: 150%;
+  border-radius: 18px;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255,255,255,.85),
+    rgba(255,255,255,.35) 35%,
+    rgba(255,255,255,0) 70%
+  );
+
+  filter: blur(10px);
+  opacity: .7;
+}
+
+/* Inner glow (light) */
+:root[data-theme="light"]
+#tc-header .tc-header-nav a.tc-ai-btn::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius: inherit;
+  pointer-events:none;
+  z-index:0;
+
+  background: radial-gradient(
+    120px 70px at 30% 25%,
+    rgba(255,255,255,.65),
+    transparent 60%
+  );
+}
+
+/* Keep text above lighting layers */
+#tc-header .tc-header-nav a.tc-ai-btn > *{
+  position: relative;
+  z-index: 2;
+}
+
+/* =========================================================
+   TICARY – AI button subtle internal pattern
+   Matches header visual language (very faint)
+========================================================= */
+
+/* Dark theme pattern */
+:root:not([data-theme="light"])
+#tc-header .tc-header-nav a.tc-ai-btn{
+  background-image:
+    /* subtle Ticary-blue pattern */
+    repeating-linear-gradient(
+      135deg,
+      rgba(63,177,206,.08) 0px,
+      rgba(63,177,206,.08) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    /* existing base gradient */
+    linear-gradient(180deg,
+      rgba(26,34,48,.95),
+      rgba(16,22,34,.95)
+    ) !important;
+}
+
+/* Light theme pattern (much softer) */
+:root[data-theme="light"]
+#tc-header .tc-header-nav a.tc-ai-btn{
+  background-image:
+    repeating-linear-gradient(
+      135deg,
+      rgba(63,177,206,.04) 0px,
+      rgba(63,177,206,.04) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    linear-gradient(180deg,
+      #ffffff,
+      #f3f6fa
+    ) !important;
+}
+
+/* =========================================================
+   TICARY – Disable hover preview / popup on AI Search button
+========================================================= */
+
+/* Kill any preview / tooltip / hover-card behaviour */
+#tc-header .tc-header-nav a.tc-ai-btn{
+  pointer-events: auto !important;
+}
+
+/* If previews are triggered via data-attributes or pseudo-elements */
+#tc-header .tc-header-nav a.tc-ai-btn::before,
+#tc-header .tc-header-nav a.tc-ai-btn::after{
+  pointer-events: none !important;
+}
+
+/* Common preview systems use these */
+#tc-header .tc-header-nav a.tc-ai-btn[data-preview],
+#tc-header .tc-header-nav a.tc-ai-btn[data-tooltip],
+#tc-header .tc-header-nav a.tc-ai-btn[data-hover]{
+  all: unset;
+}
+
+/* If a hover-card container is injected */
+.tc-hover-preview,
+.tc-nav-preview{
+  display: none !important;
+}
+
+/* =========================================================
+   TICARY — SEARCH PAGE: REMOVE OLD MAP AREA COMPLETELY
+   - Kills the black space (desktop + mobile)
+   - Makes map unopenable via old toggles
+========================================================= */
+
+/* Always collapse the old map area */
+.as-mapwrap,
+#as-map{
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Hide map toggle buttons everywhere */
+#as-map-toggle,
+#as-map-toggle-new,
+#as-map-inline-toggle{
+  display: none !important;
+}
+
+/* ===== TICARY Card Upgrade (sketch layout) ===== */
+
+.as-card{
+  position:relative;
+  overflow:hidden;
+  border-radius:18px;
+}
+
+.as-media{
+  position:relative;
+  display:block;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+
+.as-price-badge{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:5;
+  padding:8px 10px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:-.01em;
+  color:#fff;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+/* Heart button injected by Part B — place it on the image */
+.as-fav-btn{
+  position:absolute !important;
+  top:12px;
+  right:12px;
+  z-index:6;
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  display:grid;
+  place-items:center;
+}
+.as-fav-btn svg{ width:20px; height:20px; }
+.as-fav-btn[aria-pressed="true"]{
+  background:rgba(239,68,68,.25);
+  border-color:rgba(239,68,68,.65);
+}
+
+/* Body layout */
+.as-body{
+  padding:12px 12px 12px;
+}
+
+.as-titleRow{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  font-weight:950;
+  letter-spacing:-.02em;
+}
+.as-titleRow .as-make,
+.as-titleRow .as-model{
+  font-size:15px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.as-titleRow .as-make{ opacity:.92; }
+.as-titleRow .as-model{ opacity:1; text-align:right; }
+
+.as-edition{
+  margin-top:4px;
+  font-size:12px;
+  font-weight:750;
+  opacity:.72;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Spec chips (2x2 feel) */
+.as-chips{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:8px;
+}
+.as-chip{
+  padding:8px 10px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:850;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.10);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Bottom split: dealer left / actions right */
+.as-bottom{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns: minmax(0,1fr) 160px;
+  gap:10px;
+  align-items:stretch;
+}
+
+.as-dealerName{
+  font-size:12px;
+  font-weight:900;
+  opacity:.92;
+}
+.as-dealerMeta,
+.as-dealerPhone{
+  margin-top:3px;
+  font-size:11px;
+  font-weight:700;
+  opacity:.65;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.as-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  justify-content:flex-end;
+}
+
+.as-cta{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:14px;
+  font-weight:900;
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
+}
+.as-cta:hover{
+  transform:translateY(-1px);
+}
+
+/* Finance block on the card */
+.as-financeWrap{
+  border-radius:14px;
+  border:1px solid rgba(63,177,206,.22);
+  background:rgba(63,177,206,.10);
+  padding:10px 10px;
+  text-align:center;
+}
+.as-financeLabel{
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+.as-finance-inline{
+  display:block;
+  margin-top:2px;
+  font-size:13px;
+  font-weight:950;
+  color:#3fb1ce;
+}
+
+/* Mobile: stack bottom area */
+@media (max-width:520px){
+  .as-thumb{ height:190px; }
+  .as-bottom{ grid-template-columns:1fr; }
+  .as-actions{ flex-direction:row; }
+  .as-cta{ flex:1; }
+  .as-financeWrap{ flex:1; }
+}
+
+/* Bigger make/model, smaller edition */
+.as-titleRow .as-make,
+.as-titleRow .as-model{
+  font-size:17px;         /* bigger */
+  font-weight:950;
+}
+
+.as-edition{
+  font-size:12px;         /* smaller than title */
+  font-weight:750;
+  opacity:.70;
+}
+
+/* Spec pills: Ticary blue with white text */
+.as-chip{
+  background:#3fb1ce;
+  border:1px solid rgba(255,255,255,.18);
+  color:#fff;
+}
+
+/* Make icons look intentional, not huge */
+.as-chip-ic{
+  display:inline-flex;
+  width:18px;
+  justify-content:center;
+  margin-right:6px;
+  transform:translateY(0.5px);
+  opacity:.95;
+}
+
+.as-chip-t{
+  display:inline-block;
+  min-width:0;
+}
+
+/* Finance box: just label, keep it looking like a button */
+.as-financeWrap{
+  background:rgba(63,177,206,.12);
+  border:1px solid rgba(63,177,206,.28);
+}
+.as-financeLabel{
+  color:var(--as-text);           /* matches your blue pills vibe */
+  opacity:.92;
+  text-transform:none;     /* make it feel like a button label */
+  letter-spacing:0;
+  font-size:12px;
+  font-weight:950;
+}
+
+/* ===== Card polish overrides ===== */
+
+/* Make + model read as one phrase */
+.as-titleRow{
+  display:flex;
+  justify-content:flex-start;   /* was spacing them out */
+  align-items:baseline;
+  gap:8px;
+}
+
+.as-titleRow .as-make,
+.as-titleRow .as-model{
+  font-size:17px;
+  font-weight:950;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.as-titleRow .as-model{
+  text-align:left;              /* remove “right aligned” look */
+}
+
+/* Edition: less bold, dimmer, tighter spacing to pills */
+.as-edition{
+  margin-top:4px;
+  margin-bottom:6px;            /* reduce gap before pills */
+  font-size:12px;
+  font-weight:650;              /* less bold */
+  opacity:.62;                  /* dim slightly */
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Pills: NOT Ticary-blue background; bigger text */
+.as-chips{
+  margin-top:0;                 /* pulls pills closer to edition */
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px;
+}
+
+.as-chip{
+  background:rgba(255,255,255,.06);   /* back to subtle surface */
+  border:1px solid rgba(255,255,255,.10);
+  color:rgba(255,255,255,.92);        /* keep text bright */
+  padding:10px 12px;
+  border-radius:14px;
+  font-size:13px;                     /* bigger text */
+  font-weight:850;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Icon = Ticary blue */
+.as-chip-ic{
+  color:#3fb1ce;                      /* currentColor drives SVG stroke */
+  width:18px;
+  height:18px;
+  display:inline-flex;
+  flex:0 0 18px;
+}
+.as-chip-ic svg{
+  width:18px;
+  height:18px;
+  display:block;
+}
+
+/* Slightly soften dealer meta */
+.as-dealerMeta,
+.as-dealerPhone{
+  opacity:.55;
+}
+
+/* Light theme: keep pill readable */
+:root[data-theme="light"] .as-chip{
+  background:rgba(15,23,42,.06);
+  border-color:rgba(15,23,42,.10);
+  color:rgba(15,23,42,.88);
+}
+
+/* ==============================
+   Title Typography Upgrade
+   ============================== */
+
+/* Make + Model container */
+.as-titleRow{
+  display:flex;
+  justify-content:flex-start;
+  align-items:baseline;
+  gap:8px;
+  margin-bottom:2px;
+}
+
+/* MAKE */
+.as-titleRow .as-make{
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:-0.02em;
+  line-height:1.1;
+}
+
+/* MODEL */
+.as-titleRow .as-model{
+  font-size:18px;
+  font-weight:900;              /* slightly stronger than make */
+  letter-spacing:-0.02em;
+  line-height:1.1;
+}
+
+/* EDITION / VARIANT */
+.as-edition{
+  font-size:13px;
+  font-weight:600;              /* lighter than title */
+  letter-spacing:-0.01em;
+  margin-top:2px;
+  margin-bottom:6px;
+  opacity:.65;
+}
+
+/* ==============================
+   Light Theme Refinement
+   ============================== */
+
+:root[data-theme="light"] .as-titleRow .as-make{
+  color:#1f2937;    /* softer charcoal */
+}
+
+:root[data-theme="light"] .as-titleRow .as-model{
+  color:#111827;    /* strong but not pure black */
+}
+
+:root[data-theme="light"] .as-edition{
+  color:#4b5563;    /* refined grey */
+}
+
+.as-body{padding-bottom:0!important}.as-bottom{gap:0!important}.as-actions{gap:0!important}
+
+.as-bottom{margin-right:-12px!important}
+
+/* actions fill their column + square right edge */
+.as-actions{height:100%!important}.as-actions>*{flex:1!important;display:flex!important;align-items:center!important;justify-content:center!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+
+/* view details always Ticary blue + white (light & dark) */
+.as-actions .as-cta{background:#3fb1ce!important;border-color:#3fb1ce!important;color:#fff!important}
+
+.as-actions .as-financeWrap{border-radius:0!important}.as-actions .as-cta{border-radius:0!important;border-top-left-radius:18px!important}
+
+/* === Dealer phone upgrade === */
+
+.as-dealerPhone{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:13px;
+  font-weight:800;
+  opacity:.95;
+}
+
+.as-dealerPhone::before{
+  content:"";
+  width:16px;
+  height:16px;
+  display:inline-block;
+  background-repeat:no-repeat;
+  background-size:16px 16px;
+  background-position:center;
+  /* Ticary blue SVG phone */
+  background-image:url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+<path d='M22 16.92v3a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3.08 4.18 2 2 0 0 1 5.06 2h3a2 2 0 0 1 2 1.72c.12.86.32 1.7.59 2.5a2 2 0 0 1-.45 2.11L9.91 9.91a16 16 0 0 0 6.18 6.18l1.58-1.58a2 2 0 0 1 2.11-.45c.8.27 1.64.47 2.5.59A2 2 0 0 1 22 16.92z'/>\
+</svg>");
+}
+
+/* Light theme: slightly darker text */
+:root[data-theme="light"] .as-dealerPhone{
+  color:#111827;
+}
+
+/* =========================================================
+   FIX: prevent thumbnail image tiling/duplication (light theme issue)
+   Make thumbs ALWAYS non-repeating, width-fit.
+========================================================= */
+.as-thumb{
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  background-size: contain !important;
+}
+
+:root[data-theme="light"] .as-thumb{
+  border-bottom: 1px solid rgba(0,0,0,0.002);
+}
 

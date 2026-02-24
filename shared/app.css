@@ -1829,3 +1829,1170 @@
   border-bottom: 1px solid rgba(0,0,0,0.002);
 }
 
+
+ /* ====== scoped header styles (th-*) ====== */
+  :root{
+    --th-bg: rgba(17,22,27,.82);
+    --th-border: rgba(255,255,255,.12);
+    --th-text: #e8f0f5;
+    --th-dim: #c9d3dc;
+    --th-pin: #3FB1CE;         /* map pin blue */
+    --th-pin-2:#1D8CFF;        /* complementary blue for gradient */
+  }
+    :root[data-theme="light"]{
+    --th-bg: rgba(255,255,255,.94);
+    --th-border: rgba(0,0,0,.08);
+    --th-text: #11161b;
+    --th-dim: #6b7a88;
+    /* pins stay on brand */
+    --th-pin: #3FB1CE;
+    --th-pin-2:#1D8CFF;
+  }
+    /* Header buttons adapt per theme */
+  :root[data-theme="light"] .th-btn{
+    background: rgba(255,255,255,.92);
+    border-color: rgba(0,0,0,.08);
+    color: #11161b;
+  }
+  :root:not([data-theme="light"]) .th-btn{
+    background: rgba(0,0,0,.18);
+    border-color: var(--th-border);
+    color: var(--th-text);
+  }
+
+  /* Favourites heart – readable in both themes */
+  .th-fav svg path{
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+  .th-fav:hover svg path{
+    fill: #ff4d6d;
+    stroke: #ff4d6d;
+  }
+  .th-fav.has-favs svg path{
+    fill: #ff4d6d;
+    stroke: #ff4d6d;
+  }
+
+
+  /* Theme toggle pill */
+.th-theme{
+  margin-left:8px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  border-radius:999px;
+  border:1px solid var(--th-border);
+  background:rgba(15,23,42,0.75);
+  cursor:pointer;
+  position:relative;
+}
+
+.th-theme:focus-visible{
+  outline:2px solid var(--th-pin);
+  outline-offset:2px;
+}
+
+
+  .th-wrap{
+    position: sticky; top: 0; z-index: 999;
+    backdrop-filter: blur(8px);
+    background: var(--th-bg);
+    border-bottom: 1px solid var(--th-border);
+  }
+  .th-inner{
+    width: min(1240px, 96%);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+  }
+
+  /* Logo */
+  .th-logo{ display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--th-text); }
+    .th-mark{
+    width:58px;
+    height:58px;
+    flex:none;
+    border-radius:10px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  .th-word{
+    font-weight:900;
+    letter-spacing:.06em;
+    font-size:1.6rem;
+    line-height:1;
+  }
+
+  /* Emphasise "CAR" with pin gradient + subtle glow underline */
+  .th-car{
+    background: linear-gradient(90deg, var(--th-pin), var(--th-pin-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    position: relative; padding-bottom: 2px;
+  }
+  .th-car::after{
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px;
+    background: radial-gradient(closest-side, rgba(63,177,206,.9), rgba(63,177,206,0));
+    opacity:.85; border-radius:2px; filter: blur(.3px);
+  }
+  
+  /* =========================================================
+   HEADER NAV – match News page nav link styling (V2)
+========================================================= */
+#tc-header .tc-header-nav{
+  display:flex;
+  align-items:center;
+  gap:44px; /* MORE spacing between nav buttons (was 32px) */
+}
+
+/* Make the text feel “heavier” like News */
+#tc-header .tc-nav-link{
+  font-weight: 800;              /* heavier */
+  font-size: 1rem;
+  letter-spacing: .01em;
+  text-decoration: none;
+
+  /* darker default + no transparency */
+  color: var(--th-text);
+  opacity: 1;
+
+  /* helps the “boldness” perception on Mac */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+
+  transition: color .15s ease, opacity .15s ease;
+}
+
+/* Hover/focus stays crisp */
+#tc-header .tc-nav-link:hover,
+#tc-header .tc-nav-link:focus-visible{
+  color: var(--th-text);
+  opacity: 1;
+}
+
+/* Light theme: still readable but not washed out */
+:root[data-theme="light"] #tc-header .tc-nav-link{
+  color:#111827;
+  opacity: .92;
+}
+:root[data-theme="light"] #tc-header .tc-nav-link:hover,
+:root[data-theme="light"] #tc-header .tc-nav-link:focus-visible{
+  opacity: 1;
+}
+
+
+  /* CTA buttons */
+  .th-cta{display:flex;align-items:center;gap:12px;}
+  .th-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    height:44px; padding:0 18px; border-radius:14px;
+    border:1px solid var(--th-border);
+    background: rgba(0,0,0,.18);
+    color: var(--th-text);
+    text-decoration:none; font-weight:800;
+    transition: border-color .15s, transform .15s, background .15s, box-shadow .15s;
+    backdrop-filter: blur(6px);
+    gap: 8px;
+  }
+  .th-btn:hover{ border-color: rgba(255,255,255,.32); box-shadow:0 8px 24px rgba(63,177,206,.25); }
+  .th-btn:active{ transform: translateY(1px); }
+  
+    .th-cta{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  /* Circle half-white / half-black theme pill */
+  .th-theme{
+    margin-left:auto;             /* push it to far right */
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:40px;
+    border-radius:999px;
+    border:1px solid var(--th-border);
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+    outline:none;
+  }
+
+  /* Sun / moon icon inside the theme toggle */
+.th-theme-knob{
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+}
+
+/* Default (dark mode) – moon */
+.th-theme-knob::before{
+  content:"🌙";
+  font-size:15px;
+}
+
+/* Light mode – sun */
+:root[data-theme="light"] .th-theme-knob::before{
+  content:"☀️";
+}
+
+
+
+  /* Favourites button */
+  .th-fav svg {
+    width: 20px;
+    height: 20px;
+  }
+  .th-fav:hover svg path {
+    fill: #ff4d6d;
+    stroke: #ff4d6d;
+  }
+  .th-fav.has-favs svg path {
+    fill: #ff4d6d;
+    stroke: #ff4d6d;
+  }
+
+  .th-fav-icon-wrap{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+ /* Bigger heart icon (~50% up) */
+.th-fav-icon-wrap svg{
+  width:30px;
+  height:30px;
+  display:block;
+}
+
+
+/* Number centered inside larger heart (no bubble) */
+.th-fav-count{
+  position:absolute;
+  inset:0;                    /* same box as the heart */
+  display:flex;
+  align-items:center;         /* vertical center */
+  justify-content:center;     /* geometric center, then nudge left */
+
+  /* nudge slightly left because the heart shape is heavier on the right */
+  transform: translateX(-1px);  /* smaller nudge now the heart is symmetrical */
+
+  background:none;
+  border:none;
+  box-shadow:none;
+
+  font-size:14px;             /* bigger number for bigger heart */
+  font-weight:800;
+  color:#ffffff;
+  text-shadow:0 0 2px rgba(0,0,0,0.9);
+  pointer-events:none;
+}
+
+  /* Bigger "Favourites" label */
+.th-fav-text{
+  font-size:1.05rem;
+  font-weight:700;
+  letter-spacing:.015em;
+  color:var(--th-text);
+}
+
+
+
+  /* Favourites panel */
+  .th-fav-panel {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: min(480px, 90vw);
+    max-width: 480px;
+    height: 100vh;
+    background: var(--th-bg);
+    backdrop-filter: blur(12px);
+    border-left: 1px solid var(--th-border);
+    z-index: 9999;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+  .th-fav-panel.open {
+    right: 0;
+  }
+
+    .th-fav-panel.th-fav-panel--full{
+    left:0;
+    right:0;
+    width:100vw;
+    max-width:none;
+    border-left:none;
+  }
+
+
+  .th-fav-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid var(--th-border);
+  }
+  .th-fav-panel-title-wrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .th-fav-panel-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--th-text);
+    white-space:nowrap;
+  }
+  .th-fav-panel-count{
+    font-size:0.9rem;
+    color:var(--th-dim);
+  }
+    .th-fav-panel-full-btn{
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,0.03);
+    color:var(--th-text);
+    font-size:0.85rem;
+    padding:6px 12px;
+    cursor:pointer;
+    white-space:nowrap;
+    font-weight:600;
+    transition:background .15s,border-color .15s,transform .1s;
+  }
+  .th-fav-panel-full-btn:hover{
+    border-color:rgba(255,255,255,.6);
+    background:rgba(255,255,255,0.08);
+  }
+  .th-fav-panel-full-btn:active{
+    transform:translateY(1px);
+  }
+
+
+  .th-fav-panel-close {
+    background: none;
+    border: none;
+    color: var(--th-text);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+  .th-fav-panel-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .th-fav-panel-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  /* Card layout (compact mode = current list style) */
+  .th-fav-item {
+    background: rgba(22, 28, 34, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    transition: all 0.2s;
+  }
+  .th-fav-item:hover {
+    border-color: rgba(63, 177, 206, 0.3);
+    transform: translateX(-4px);
+  }
+  .th-fav-item-thumb {
+    width: 100px;
+    height: 70px;
+    border-radius: 8px;
+    background: #0f1418 center/cover no-repeat;
+    flex-shrink: 0;
+  }
+  .th-fav-item-info {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .th-fav-item-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .th-fav-item-meta {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 6px;
+  }
+  .th-fav-item-price {
+    font-weight: 700;
+    color: #3fb1ce;
+    font-size: 1rem;
+  }
+  .th-fav-item-remove {
+    background: rgba(255, 77, 109, 0.1);
+    border: 1px solid rgba(255, 77, 109, 0.3);
+    color: #ff4d6d;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .th-fav-item-remove:hover {
+    background: rgba(255, 77, 109, 0.2);
+    border-color: rgba(255, 77, 109, 0.5);
+  }
+
+  .th-fav-panel.th-fav-panel--full .th-fav-panel-body{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 360px));
+  gap:16px;
+  justify-content:center;      /* center 1–2 cards instead of stretching */
+  align-content:flex-start;    /* keep them at the top */
+  }
+  .th-fav-panel.th-fav-panel--full .th-fav-item{
+    flex-direction:column;
+    align-items:flex-start;
+    margin-bottom:0;
+  }
+  .th-fav-panel.th-fav-panel--full .th-fav-item-thumb{
+    width:100%;
+    height:160px;
+  }
+  .th-fav-panel.th-fav-panel--full .th-fav-item-remove{
+    margin-top:8px;
+  }
+
+  .th-fav-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--th-dim);
+  }
+  .th-fav-empty svg {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    opacity: 0.3;
+  }
+    .th-fav-item-link{
+    display:inline-flex;
+    margin-top:6px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid rgba(63,177,206,.6);
+    color:var(--th-text);
+    font-size:0.85rem;
+    font-weight:600;
+    text-decoration:none;
+    background:rgba(63,177,206,0.08);
+    transition:background .15s,border-color .15s,transform .1s;
+  }
+  .th-fav-item-link:hover{
+    background:rgba(63,177,206,0.16);
+    border-color:#3FB1CE;
+  }
+  .th-fav-item-link:active{
+    transform:translateY(1px);
+  }
+
+
+  /* Overlay */
+  .th-fav-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .th-fav-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  /* Favourites header layout */
+.th-fav-panel-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.th-fav-header-main{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.th-fav-header-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* Big primary toggle: "See full screen" / "See compact" */
+.th-fav-view-toggle{
+  height:40px;
+  padding:0 20px;
+  border-radius:999px;
+  border:1px solid rgba(63,177,206,0.9);
+  background:rgba(15,20,24,0.96);
+  color:#e8f0f5;
+  font-size:1rem;
+  font-weight:750;
+  letter-spacing:0.02em;
+  text-transform:none;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 8px 20px rgba(0,0,0,0.55);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s,
+    box-shadow 0.15s;
+}
+
+.th-fav-view-toggle:hover{
+  background:rgba(26,34,42,1);
+  border-color:#3FB1CE;
+  transform:translateY(-1px);
+  box-shadow:0 10px 26px rgba(63,177,206,0.3);
+}
+
+.th-fav-view-toggle:active{
+  transform:translateY(0);
+  box-shadow:0 5px 14px rgba(0,0,0,0.65);
+}
+
+/* When panel is in full-screen mode, make the toggle look "on" */
+.th-fav-panel.th-fav-panel--full .th-fav-view-toggle{
+  background:#3FB1CE;
+  color:#0f1418;
+  border-color:#3FB1CE;
+}
+
+/* Favourites card structure refinements */
+.th-fav-item{
+  display:flex;
+  gap:16px;
+}
+
+.th-fav-panel.th-fav-panel--full .th-fav-item{
+  /* in full-screen mode, let them breathe a bit more */
+  padding:18px;
+}
+
+/* Title + edition */
+.th-fav-item-title-wrap{
+  text-decoration:none;
+  color:inherit;
+}
+
+.th-fav-item-title{
+  font-weight:700;
+  font-size:1.05rem;
+  margin-bottom:2px;
+}
+
+.th-fav-item-edition{
+  font-size:0.9rem;
+  opacity:0.9;
+}
+
+/* Year • mileage row */
+.th-fav-item-meta-row{
+  margin-top:4px;
+  font-size:0.9rem;
+  opacity:0.85;
+}
+
+/* Fuel • gearbox row */
+.th-fav-item-fg-row{
+  margin-top:3px;
+  font-size:0.9rem;
+  opacity:0.9;
+}
+
+/* Price + finance row */
+.th-fav-item-price-row{
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.th-fav-item-price{
+  font-weight:700;
+  font-size:1rem;
+  color:#3FB1CE;
+}
+
+.th-fav-item-finance{
+  font-size:0.9rem;
+  font-weight:600;
+  white-space:nowrap;
+  opacity:0.95;
+}
+
+
+  /* Small screens */
+  @media (max-width: 640px){
+    .th-inner{ gap:12px; padding:10px 0; }
+    .th-word{ font-size:1.02rem; letter-spacing:.055em; }
+    .th-btn{ height:40px; padding:0 14px; }
+    .th-mark{ width:32px; height:32px; }
+    .th-fav-text{ display:none; } /* keep header compact on tiny screens */
+  }
+
+    @media (min-width: 900px){
+    .th-mark { width:62px; height:62px; }
+    .th-word { font-size:1.8rem; }
+    .th-inner { padding:16px 0; }
+  }
+  
+  /* === FAVOURITES LAYOUT TWEAKS === */
+
+/* Base card layout */
+.th-fav-item{
+  background: rgba(22, 28, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 14px;
+}
+
+/* Compact (slide-in) layout */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item{
+  align-items: center;
+}
+
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-thumb{
+  width: 120px;
+  height: 80px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-info{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Hide fuel/gearbox in compact to reduce clutter */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-fg-row{
+  display: none;
+}
+
+/* Put remove inside actions row on the right in compact */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-actions{
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Full-screen: grid of big cards */
+.th-fav-panel.th-fav-panel--full .th-fav-panel-body{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  padding: 20px;
+}
+
+.th-fav-panel.th-fav-panel--full .th-fav-item{
+  flex-direction: column;
+  align-items: stretch;
+  padding: 16px;
+}
+
+.th-fav-panel.th-fav-panel--full .th-fav-item-thumb{
+  width: 100%;
+  height: 220px;          /* taller hero image */
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+/* Actions row (view details + remove) */
+.th-fav-item-actions{
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* View details button */
+.th-fav-item-details-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(63,177,206,0.85);
+  background: transparent;
+  color: #e8f0f5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.th-fav-item-details-btn:hover{
+  background: rgba(63,177,206,0.12);
+}
+
+/* In compact mode you can hide the details button if it's too busy */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-details-btn{
+  display: none;
+}
+
+/* === Fix full-screen favourites layout (no more full-width card) === */
+
+/* Use flex rows instead of a single huge grid column */
+.th-fav-panel.th-fav-panel--full .th-fav-panel-body{
+  display:flex;
+  flex-wrap:wrap;
+  gap:18px;
+  padding:20px;
+}
+
+/* Each card has a reasonable max width */
+.th-fav-panel.th-fav-panel--full .th-fav-item{
+  flex:0 1 360px;   /* target width ~360px */
+  max-width:420px;
+  flex-direction:column;
+  align-items:stretch;
+}
+
+/* Hero image inside the card: bigger, but only as wide as the card */
+.th-fav-panel.th-fav-panel--full .th-fav-item-thumb{
+  width:100%;
+  height:180px;      /* if you want “as it was”, drop this line */
+  border-radius:12px;
+  margin-bottom:10px;
+}
+
+/* Compact slide-in: show "View details" next to Remove */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-actions{
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;  /* details left, remove right */
+  gap: 10px;
+}
+
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-details-btn{
+  display: inline-flex;            /* ensure it’s visible in compact */
+}
+.th-fav-item-finance--fallback{
+  color: var(--th-dim);
+  font-weight:500;
+}
+/* Ensure no £ or " / month" are added around fallback finance text anywhere */
+.as-finance-inline--fallback::before,
+.as-finance-inline--fallback::after,
+.th-fav-item-finance--fallback::before,
+.th-fav-item-finance--fallback::after{
+  content: '' !important;
+}
+
+/* In favourites, never add £ or " / month" via pseudo-elements */
+.th-fav-item-finance::before,
+.th-fav-item-finance::after{
+  content: '' !important;
+}
+/* Favourites: finance placeholder (no £, no "/ month") */
+.th-fav-item-finance-placeholder{
+  font-size: 0.9rem;
+  color: var(--th-dim);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Just in case any global pseudo rules exist, nuke them */
+.th-fav-item-finance-placeholder::before,
+.th-fav-item-finance-placeholder::after{
+  content: '' !important;
+}
+
+/* Mobile: give favourites full-screen view a larger safe-area bottom padding */
+@media (max-width: 768px) {
+  .th-fav-panel.th-fav-panel--full .th-fav-panel-body{
+    padding-bottom: 80px; /* bigger base padding */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)); /* nice big buffer on iOS */
+  }
+}
+
+
+  /* Light theme – favourites panel + cards */
+  :root[data-theme="light"] .th-fav-panel{
+    background:#f4f5f7;
+    border-left:1px solid rgba(0,0,0,.06);
+    box-shadow:-4px 0 24px rgba(15,20,24,.25);
+  }
+
+  /* Full-screen mode keeps same light background */
+  :root[data-theme="light"] .th-fav-panel.th-fav-panel--full{
+    background:#f4f5f7;
+  }
+
+  /* Individual favourite cards */
+  :root[data-theme="light"] .th-fav-item{
+    background:#ffffff;
+    border:1px solid rgba(0,0,0,.08);
+    color:#11161b;
+  }
+
+  :root[data-theme="light"] .th-fav-item-title{
+    color:#11161b;
+  }
+
+  :root[data-theme="light"] .th-fav-item-sub,
+  :root[data-theme="light"] .th-fav-item-meta{
+    color:#5c6b7a;
+  }
+
+  /* Thumbnail background so empty images don’t look like dark bricks */
+  :root[data-theme="light"] .th-fav-item-thumb{
+    background:#dde2e8 center/cover no-repeat;
+  }
+
+  /* Header of the favourites panel in light mode */
+  :root[data-theme="light"] .th-fav-panel-header{
+    background:rgba(255,255,255,.96);
+    border-bottom:1px solid rgba(0,0,0,.06);
+  }
+
+  /* Light theme – "View details" button in favourites */
+  :root[data-theme="light"] .th-fav-item-details-btn{
+    background:#3FB1CE;              /* Ticary blue */
+    border-color:#3FB1CE;
+    color:#ffffff;
+  }
+  :root[data-theme="light"] .th-fav-item-details-btn:hover{
+    filter:brightness(1.05);
+  }
+  
+  /* Mobile – hide the "See full screen / See compact" toggle in favourites */
+@media (max-width: 768px){
+  .th-fav-panel-full-btn {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   TICARY HEADER – bottom border + right-side grid that fades left
+========================================================= */
+
+#tc-header.th-wrap{
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  /* theme-aware header surface for solid buttons */
+  --tc-head-surface: #0b1220;
+
+  /* accent colour */
+  --tc-blue: #3FB1CE;
+
+  /* grid line strength */
+  --tc-grid-a-strong: 0.22;
+  --tc-grid-a-soft:   0.10;
+
+  /* fade control (how far the grid reaches left) */
+  --tc-grid-width: 54%;
+}
+
+/* Light theme tweaks */
+:root[data-theme="light"] #tc-header.th-wrap{
+  --tc-head-surface: #ffffff;
+  --tc-grid-a-strong: 0.18;
+  --tc-grid-a-soft:   0.08;
+}
+
+/* Keep header contents above effects */
+#tc-header.th-wrap .th-inner{
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------
+   1) Ticary bottom border (welds header to page)
+--------------------------------------------------------- */
+#tc-header.th-wrap{
+  border-bottom: 2px solid rgba(63,177,206,0.55) !important;
+}
+:root[data-theme="light"] #tc-header.th-wrap{
+  border-bottom-color: rgba(63,177,206,0.45) !important;
+}
+
+/* Optional: a subtle inner shadow line so it looks “built in” */
+#tc-header.th-wrap{
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.12);
+}
+:root[data-theme="light"] #tc-header.th-wrap{
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+}
+
+/* ---------------------------------------------------------
+   2) Right-side grid texture that fades smoothly left
+   (grid only, no weird shapes)
+--------------------------------------------------------- */
+#tc-header.th-wrap::after{
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  height:100%;
+  width: var(--tc-grid-width);
+  pointer-events:none;
+  z-index: 1;
+
+  /* “Fancy grid”: two grids + one diagonal micro-line layer */
+  background:
+    /* vertical grid */
+    repeating-linear-gradient(
+      90deg,
+      rgba(63,177,206,var(--tc-grid-a-soft)) 0px,
+      rgba(63,177,206,var(--tc-grid-a-soft)) 1px,
+      rgba(0,0,0,0) 1px,
+      rgba(0,0,0,0) 22px
+    ),
+    /* horizontal grid */
+    repeating-linear-gradient(
+      0deg,
+      rgba(63,177,206,var(--tc-grid-a-soft)) 0px,
+      rgba(63,177,206,var(--tc-grid-a-soft)) 1px,
+      rgba(0,0,0,0) 1px,
+      rgba(0,0,0,0) 18px
+    ),
+    /* subtle diagonal “tech” lines (very light) */
+    repeating-linear-gradient(
+      -28deg,
+      rgba(63,177,206,var(--tc-grid-a-strong)) 0px,
+      rgba(63,177,206,var(--tc-grid-a-strong)) 1px,
+      rgba(0,0,0,0) 1px,
+      rgba(0,0,0,0) 30px
+    );
+
+  background-repeat: repeat;
+  background-position: right top;
+
+  /* Smooth fade left (this is the ONLY gradient, just for fading) */
+  -webkit-mask-image: linear-gradient(to left, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 62%, transparent 100%);
+}
+
+/* Mobile: reduce grid so it stays clean */
+@media (max-width: 768px){
+  #tc-header.th-wrap{
+    border-bottom-width: 2px !important;
+  }
+  #tc-header.th-wrap::after{
+    width: 62%;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(63,177,206,0.10) 0px,
+        rgba(63,177,206,0.10) 1px,
+        rgba(0,0,0,0) 1px,
+        rgba(0,0,0,0) 22px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        rgba(63,177,206,0.10) 0px,
+        rgba(63,177,206,0.10) 1px,
+        rgba(0,0,0,0) 1px,
+        rgba(0,0,0,0) 18px
+      );
+    -webkit-mask-image: linear-gradient(to left, #000 70%, transparent 100%);
+    mask-image: linear-gradient(to left, #000 70%, transparent 100%);
+  }
+}
+
+/* =========================================================
+   HEADER BUTTONS – SOLID (no translucency showing through)
+   (Include since you said you deleted progress)
+========================================================= */
+
+#tc-header :is(a,button)[class*="th-"],
+#tc-header :is(a,button)[class*="btn"],
+#tc-header :is(a,button)[aria-label*="Fav"],
+#tc-header :is(a,button)[aria-label*="Favourite"],
+#tc-header :is(a,button)[aria-label*="Home"]{
+  background: var(--tc-head-surface) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#tc-header :is(a,button)[class*="th-"]::before,
+#tc-header :is(a,button)[class*="th-"]::after,
+#tc-header :is(a,button)[class*="btn"]::before,
+#tc-header :is(a,button)[class*="btn"]::after{
+  background: transparent !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* =========================================================
+   Theme toggle tooltip – ONLY on hover/focus (hard scoped)
+========================================================= */
+
+/* Base hidden state (wins against anything else) */
+#tc-header #th-theme-toggle.th-theme::after{
+  content: "Dark theme";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  transform: translateX(-50%) translateY(-2px);
+
+  background: #020617;
+  color: #e5f0ff;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+
+  box-shadow: 0 10px 25px rgba(0,0,0,0.65);
+  transition: opacity .14s ease, transform .14s ease, visibility .14s ease;
+  z-index: 99999;
+}
+
+/* Light theme text + bubble colour */
+:root[data-theme="light"] #tc-header #th-theme-toggle.th-theme::after{
+  content: "Light theme";
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 10px 25px rgba(15,23,42,0.12);
+}
+
+/* Show ONLY when you actually hover/focus the button */
+#tc-header #th-theme-toggle.th-theme:hover::after,
+#tc-header #th-theme-toggle.th-theme:focus-visible::after{
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) translateY(2px);
+}
+/* =========================================
+   FAV PANEL (COMPACT) – bigger thumb + hide edition
+   Paste at END of searchpage - Header embed <style>
+========================================= */
+
+/* Hide edition only in compact slide-in */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-edition{
+  display:none !important;
+}
+
+/* Make the thumbnail noticeably bigger in compact */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-thumb{
+  width: 160px !important;
+  height: 104px !important;
+  border-radius: 12px !important;
+}
+
+/* Give the info column a bit more room */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item{
+  gap: 16px !important;
+  padding: 14px 14px !important;
+}
+
+/* Optional: tighten vertical spacing since edition is gone */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-meta-row{
+  margin-top: 2px !important;
+}
+
+/* Keep actions row neat in compact */
+.th-fav-panel:not(.th-fav-panel--full) .th-fav-item-actions{
+  margin-top: 10px !important;
+}
+
+/* Auth header links (CSS-driven) */
+.tc-login-link{ display: inline-flex; }
+.tc-account-link,
+.tc-logout-btn{ display: none; }
+
+html.tc-logged-in .tc-login-link{ display: none; }
+html.tc-logged-in .tc-account-link,
+html.tc-logged-in .tc-logout-btn{ display: inline-flex; }
+
+/* FIX: allow profile dropdown to render outside the header */
+#tc-header.th-wrap{
+  overflow: visible !important;
+}
+
+/* Profile icon button */
+.tc-prof-btn{
+  width:48px;height:48px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);
+  color:var(--th-text, #fff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+/* Dropdown items */
+.tc-prof-item{
+  display:block;
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  background:none;
+  border:0;
+  color:var(--th-text, #fff);
+  font-weight:800;
+  text-align:left;
+  text-decoration:none;
+}
+.tc-prof-item:hover{ background:rgba(255,255,255,.08); }
+.tc-prof-loading{ opacity:.8; font-weight:700; }
+
+/* MOBILE: hide profile icon (we use the slide-in menu auth links instead) */
+@media (max-width: 900px){
+  #tc-header .tc-prof-wrap{
+    display:none !important;
+  }
+}
+

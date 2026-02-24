@@ -4882,3 +4882,276 @@ if (t === 'fill' && has(id, /hillshade/i)) {
   const mo = new MutationObserver(scan);
   mo.observe(document.body, { childList:true, subtree:true });
 })();
+
+
+/* =========================================================
+   TICARY — Page Body Custom Code (migrated to bundle.js)
+   - Origin placeholder typing
+   - Embed mode (map/list) iframe sizing
+   - Loader overlay
+   - Cross-tab favourites sync ping
+   - Header AI btn hover propagation fix
+========================================================= */
+
+/* --- asf-origin placeholder: style + typing --- */
+(function(){
+  if (window.__tcAsfOriginPlaceholder_v1) return;
+  window.__tcAsfOriginPlaceholder_v1 = 1;
+
+  // run when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once:true});
+  } else { init(); }
+
+  function init(){
+    var input = document.getElementById('asf-origin');
+    if(!input) return;
+
+    // 1) Lighten placeholder (near-white). Only inject once.
+    if(!document.getElementById('asf-origin-ph-style')){
+      var st = document.createElement('style');
+      st.id = 'asf-origin-ph-style';
+      st.textContent =
+        '#asf-origin::placeholder{color:var(--as-dim,rgba(255,255,255,.78));opacity:1}' +
+        '#asf-origin:-ms-input-placeholder{color:var(--as-dim,rgba(255,255,255,.78))}' +
+        '#asf-origin::-ms-input-placeholder{color:var(--as-dim,rgba(255,255,255,.78))}';
+      document.head.appendChild(st);
+    }
+
+    // 2) Placeholder typing effect
+    var phrases = (input.getAttribute('data-phrases') || 'e.g. SW1A 1AA|e.g. Bristol|e.g. M1 2AB|e.g. Cardiff')
+      .split('|').map(function(s){return s.trim();}).filter(Boolean);
+    if(!phrases.length) return;
+
+    var i=0, j=0, dir=1, t;
+    var TYPE=90, ERASE=40, HOLD_FULL=1200, HOLD_GAP=600, START=800;
+
+    function tick(){
+      // pause if user interacting or value present
+      if(document.activeElement===input || input.value){
+        input.placeholder='';
+        return;
+      }
+      var target = phrases[i];
+      j += dir;
+      input.placeholder = target.slice(0, j);
+
+      if(j===target.length){ dir=-1; t=setTimeout(tick, HOLD_FULL); return; }
+      if(j===0){ dir=1; i=(i+1)%phrases.length; t=setTimeout(tick, HOLD_GAP); return; }
+      t=setTimeout(tick, dir>0 ? TYPE : ERASE);
+    }
+
+    setTimeout(tick, START);
+
+    input.addEventListener('input', function(){ input.placeholder=''; });
+    input.addEventListener('focus', function(){ input.placeholder=''; });
+    input.addEventListener('blur', function(){
+      if(input.value) { input.placeholder=''; return; }
+      clearTimeout(t); j=0; dir=1; setTimeout(tick, 400);
+    });
+  }
+})();
+
+/* --- Embed mode: map/list + height postMessage --- */
+(function(){
+  if (window.__asEmbedV2) return; window.__asEmbedV2 = true;
+
+  const p = new URLSearchParams(location.search);
+  const mode = (p.get('mode')||'').toLowerCase(); // 'map' | 'list'
+  if (!mode) return;
+
+  const Q = (p.get('q')||'').trim();
+
+  const IS_MOBILE = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  const baseH = Math.max(1, parseInt(p.get('h')||'0', 10)) || 360;
+  const H = IS_MOBILE ? (window.innerHeight || baseH) : baseH;
+
+  const PAD = 0;
+
+  const $ = (s,r=document)=>r.querySelector(s);
+  const $$= (s,r=document)=>Array.from(r.querySelectorAll(s));
+  function hide(sel){ $$(sel).forEach(el=>{ el.style.setProperty('display','none','important'); }); }
+  function zero(sel){ $$(sel).forEach(el=>{ el.style.margin='0'; el.style.padding='0'; }); }
+
+  const mapEl    = $('#as-map,[data-map],.as-map');
+  const mapWrap  = (mapEl && (mapEl.closest('.section,.w-container,.container,[class*="container"],[class*="section"]') || mapEl)) || null;
+  const filtersUI= $('#as-filters,[data-filters],.as-filters,#as-filters-body');
+  const listWrap = $('#as-list,[data-list],.as-list');
+
+  hide('header, .th-wrap, [data-global-header], footer, .tf-wrap, [data-global-footer]');
+  hide('.asq-wrap, .searchbar, [data-searchbar]');
+  zero('body, html, main, .page-wrap, .section, .container, .w-container');
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  document.body.style.background = 'transparent';
+
+  if (mode === 'map') {
+    document.body.classList.add('as-embed-map');
+    if (filtersUI) filtersUI.style.setProperty('display','none','important');
+    if (listWrap)  listWrap.style.setProperty('display','none','important');
+
+    const target = mapWrap || mapEl;
+    if (target) {
+      target.style.margin = '0';
+      target.style.padding = '0';
+      target.style.minHeight = H + 'px';
+      target.style.maxHeight = H + 'px';
+      target.style.height    = H + 'px';
+    }
+    if (mapEl) {
+      mapEl.style.minHeight = H + 'px';
+      mapEl.style.maxHeight = H + 'px';
+      mapEl.style.height    = H + 'px';
+    }
+  } else if (mode === 'list') {
+    if (filtersUI) filtersUI.style.setProperty('display','none','important');
+    if (mapWrap)   mapWrap.style.setProperty('display','none','important');
+    if (listWrap)  { listWrap.style.margin='0'; listWrap.style.padding='0'; }
+  }
+
+  function applyQueryNow(){
+    try{
+      const input = document.querySelector('#asq');
+      const btn   = document.querySelector('#asq-apply');
+      if (input && btn && Q) { input.value = Q; btn.click(); }
+      else {
+        const makeSel = document.querySelector('[data-filter="make"] select, select[id*="make" i]');
+        if (makeSel && Q) {
+          const mk = Q.toLowerCase().split(/\s+/)[0];
+          for (const opt of makeSel.options) {
+            if ((opt.textContent||'').toLowerCase().includes(mk)) {
+              makeSel.value = opt.value;
+              makeSel.dispatchEvent(new Event('change',{bubbles:true}));
+              break;
+            }
+          }
+          const applyBtn = document.querySelector('#asf-apply,[data-filter-apply]');
+          applyBtn && applyBtn.click();
+        }
+      }
+    }catch(e){}
+  }
+  requestAnimationFrame(()=> setTimeout(applyQueryNow, 350));
+
+  function currentHeight(){
+    const el = mapWrap || mapEl || document.documentElement;
+    const h = (el && (el.getBoundingClientRect().height || el.offsetHeight)) || H;
+    return Math.max(H, Math.round(h) + PAD);
+  }
+  function sendHeight(){ parent.postMessage({ type:'as-embed-height', height: currentHeight() }, '*'); }
+  ['load','resize'].forEach(ev=> addEventListener(ev, ()=> setTimeout(sendHeight, 60)));
+  const mo = new MutationObserver(()=> setTimeout(sendHeight, 40));
+  mo.observe(document.documentElement, {childList:true,subtree:true,attributes:true});
+  setTimeout(sendHeight, 400);
+})();
+
+/* --- Loader overlay --- */
+(function () {
+  if (window.__ticaryLoaderBooted) return;
+  window.__ticaryLoaderBooted = 1;
+
+  function createLoader() {
+    if (document.getElementById('ticary-loader')) return;
+    var wrap = document.createElement('div');
+    wrap.id = 'ticary-loader';
+    wrap.className = 'ticary-loader';
+    wrap.innerHTML =
+      '<div class="ticary-loader__inner">' +
+        '<div class="ticary-loader__logo">T<span>ICARY</span></div>' +
+        '<div class="ticary-loader__spinner"></div>' +
+        '<div class="ticary-loader__text">Loading cars…</div>' +
+      '</div>';
+    document.body.appendChild(wrap);
+  }
+
+  function hideLoader() {
+    var wrap = document.getElementById('ticary-loader');
+    if (!wrap) return;
+    if (wrap.classList.contains('ticary-loader--hide')) return;
+    wrap.classList.add('ticary-loader--hide');
+    setTimeout(function () {
+      if (wrap && wrap.parentNode) {
+        wrap.parentNode.removeChild(wrap);
+      }
+    }, 450);
+  }
+
+  function isReady() {
+    try {
+      var hasCars = window.__ticaryCars && window.__ticaryCars.length;
+      var hasCard = document.querySelector('.as-card');
+      return !!(hasCars && hasCard);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function boot() {
+    createLoader();
+
+    var tries = 0;
+    var maxTries = 60; // ~9s at 150ms steps
+    var iv = setInterval(function () {
+      tries++;
+      if (isReady() || tries > maxTries) {
+        clearInterval(iv);
+        hideLoader();
+      }
+    }, 150);
+
+    setTimeout(hideLoader, 10000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  window.ticaryHideLoader = hideLoader;
+})();
+
+/* --- Cross-tab favourites sync ping --- */
+(function(){
+  if (window.__tcFavBroadcastV1) return;
+  window.__tcFavBroadcastV1 = 1;
+
+  const CH = ("BroadcastChannel" in window) ? new BroadcastChannel("tc:favs") : null;
+
+  function reconcileSoon(){
+    if (typeof window.tcReconcileFavs === "function") {
+      setTimeout(() => { try { window.tcReconcileFavs(); } catch(e){} }, 80);
+    }
+  }
+
+  if (CH){
+    CH.onmessage = (ev) => {
+      if (ev?.data?.type === "favs_changed") reconcileSoon();
+    };
+  }
+
+  document.addEventListener("click", (e) => {
+    const isHeart = e.target?.closest?.(".as-fav-btn");
+    const isSlideRemove = e.target?.closest?.(".th-fav-item-remove");
+    if (!isHeart && !isSlideRemove) return;
+
+    setTimeout(() => {
+      try{
+        CH && CH.postMessage({ type: "favs_changed", at: Date.now() });
+      }catch(e){}
+    }, 350);
+  }, true);
+
+})();
+
+/* --- Header AI button hover propagation fix --- */
+(function(){
+  if (window.__tcAiBtnHoverFix_v1) return;
+  window.__tcAiBtnHoverFix_v1 = 1;
+
+  const aiBtn = document.querySelector('#tc-header a.tc-ai-btn');
+  if(!aiBtn) return;
+
+  aiBtn.addEventListener('mouseenter', e => { e.stopImmediatePropagation(); }, true);
+  aiBtn.addEventListener('mouseover',  e => { e.stopImmediatePropagation(); }, true);
+})();

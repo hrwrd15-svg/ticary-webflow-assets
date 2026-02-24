@@ -7649,5 +7649,359 @@ body.tc-filter-panel-open{
   overflow-y: auto !important;
 }
 
+/* =========================================================
+   TCDM MAP AID v7.4 — FULL REPLACEMENT
+   Adds: CURRENT PIN can be a grouped pin with count + popup carousel
+   Still includes:
+   - safe load-more/count logic (#as-more)
+   - batching (PAGE=24)
+   - grouped pins by rounded coords
+   - pretty card popup w/ arrows on image
+   - safe-zone pan (up OR down) so popup never clips
+   - fitBounds via cameraForBounds with zoom clamp (no “Italy view”)
+========================================================= */
 
+/* -----------------------------
+   Controls layout
+-------------------------------- */
+#tcdm-mapControls{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:nowrap;
+  justify-content:flex-end;
+}
+
+/* Pill */
+#tcdm-mapPill{
+  font-size:11px;
+  font-weight:900;
+  color:var(--tc-dim);
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid var(--tc-border);
+  background:rgba(0,0,0,.12);
+  white-space:nowrap;
+}
+:root[data-theme="light"] #tcdm-mapPill{ background:rgba(255,255,255,.7); }
+
+/* Buttons */
+.tcdm-mapBtn{
+  appearance:none;
+  border:none;
+  cursor:pointer;
+  font-weight:950;
+  font-size:12px;
+  border-radius:12px;
+  padding:10px 12px;
+  border:1px solid rgba(63,177,206,.40);
+  background:rgba(63,177,206,.16);
+  color:var(--tc-text);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition:transform .12s ease, background .12s ease, border-color .12s ease, opacity .12s ease;
+}
+.tcdm-mapBtn:hover{
+  transform:translateY(-1px);
+  background:rgba(63,177,206,.22);
+  border-color:rgba(63,177,206,.55);
+}
+.tcdm-mapBtn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+
+/* Radius row */
+#tcdm-mapRadiusRow{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+#tcdm-radiusVal{
+  font-weight:950;
+  color:#3fb1ce;
+  white-space:nowrap;
+  min-width: 78px;
+  text-align:left;
+}
+#tcdm-radiusCtrl{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 18px;
+}
+#tcdm-radiusMinus,
+#tcdm-radiusPlus{
+  width:40px;
+  padding:8px 0;
+  border-radius:12px;
+}
+
+/* ===== HARD RESET range input ===== */
+#tcdm-radius{
+  flex: 1 1 240px;
+  min-width: 160px;
+  height: 22px;
+
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  background:transparent !important;
+  border:none !important;
+  outline:none !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  margin:0 !important;
+}
+#tcdm-radius::-webkit-slider-runnable-track{
+  -webkit-appearance:none !important;
+  height:6px !important;
+  border-radius:999px !important;
+  background: rgba(63,177,206,.30) !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+#tcdm-radius::-webkit-slider-thumb{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  width:16px !important;
+  height:16px !important;
+  margin-top:-5px !important;
+  border-radius:999px !important;
+  background:#3fb1ce !important;
+  border:2px solid rgba(255,255,255,.95) !important;
+  box-shadow: 0 6px 14px rgba(63,177,206,.20) !important;
+}
+#tcdm-radius::-moz-range-track{
+  height:6px !important;
+  border-radius:999px !important;
+  background: rgba(63,177,206,.30) !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+#tcdm-radius::-moz-range-progress{
+  height:6px !important;
+  border-radius:999px !important;
+  background: rgba(63,177,206,.30) !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+#tcdm-radius::-moz-range-thumb{
+  width:16px !important;
+  height:16px !important;
+  border-radius:999px !important;
+  background:#3fb1ce !important;
+  border:2px solid rgba(255,255,255,.95) !important;
+  box-shadow: 0 6px 14px rgba(63,177,206,.20) !important;
+}
+
+/* Show within must shrink + ellipsis */
+#tcdm-mapWithin{
+  flex: 0 1 240px;
+  min-width: 170px;
+  max-width: 280px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -----------------------------
+   Pin visuals (inner only)
+-------------------------------- */
+.tc-pin{
+  position:relative;
+  width:18px;
+  height:18px;
+  border-radius:999px;
+  background:#3fb1ce;
+  border:2px solid rgba(255,255,255,.92);
+  box-shadow:0 10px 24px rgba(63,177,206,.35), 0 6px 16px rgba(0,0,0,.22);
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.tc-pin:hover{
+  transform:scale(1.10);
+  box-shadow:0 12px 30px rgba(63,177,206,.45), 0 8px 18px rgba(0,0,0,.24);
+}
+
+/* current pin: slightly bigger + stronger */
+.tc-pin.is-current{
+  width:20px;
+  height:20px;
+  border-width:3px;
+  box-shadow:0 14px 34px rgba(63,177,206,.55), 0 10px 18px rgba(0,0,0,.26);
+}
+
+/* count badge */
+.tc-pinCount{
+  position:absolute;
+  top:-10px;
+  right:-10px;
+  min-width:18px;
+  height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#0a0e14;
+  border:1px solid rgba(255,255,255,.22);
+  color:#fff;
+  font-size:11px;
+  font-weight:950;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  pointer-events:none;
+}
+:root[data-theme="light"] .tc-pinCount{
+  background:#ffffff;
+  color:#0f172a;
+  border-color:rgba(15,23,42,.18);
+}
+
+/* hover tooltip */
+.tc-pinTip{
+  position:absolute;
+  left:50%;
+  bottom:26px;
+  transform:translateX(-50%);
+  padding:7px 9px;
+  border-radius:12px;
+  background:rgba(0,0,0,.78);
+  border:1px solid rgba(255,255,255,.16);
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .12s ease, transform .12s ease;
+}
+.tc-pin:hover .tc-pinTip{
+  opacity:1;
+  transform:translateX(-50%) translateY(-2px);
+}
+:root[data-theme="light"] .tc-pinTip{
+  background:rgba(255,255,255,.92);
+  color:#0f172a;
+  border-color:rgba(15,23,42,.12);
+}
+
+/* -----------------------------
+   Popup card
+-------------------------------- */
+.tc-pop{
+  width:270px;
+  border-radius:18px;
+  overflow:hidden;
+  background:#0b1220;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 18px 50px rgba(0,0,0,.25);
+  color:#ffffff;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+:root[data-theme="light"] .tc-pop{
+  background:#ffffff;
+  border-color:rgba(15,23,42,.12);
+  color:#0f172a;
+}
+
+.tc-popImgWrap{
+  position:relative;
+  width:100%;
+  height:150px;
+  background:rgba(255,255,255,.06);
+}
+:root[data-theme="light"] .tc-popImgWrap{ background:rgba(15,23,42,.05); }
+
+.tc-popImgTop{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+/* arrows ON image */
+.tc-imgNavBtn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(0,0,0,.45);
+  color:#fff;
+  font-weight:950;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter: blur(6px);
+}
+.tc-imgNavBtn:hover{ background:rgba(0,0,0,.58); }
+.tc-imgNavBtn:active{ transform:translateY(-50%) scale(.98); }
+.tc-imgPrev{ left:10px; }
+.tc-imgNext{ right:10px; }
+
+:root[data-theme="light"] .tc-imgNavBtn{
+  background:rgba(255,255,255,.70);
+  border-color:rgba(15,23,42,.14);
+  color:#0f172a;
+}
+:root[data-theme="light"] .tc-imgNavBtn:hover{ background:rgba(255,255,255,.85); }
+
+.tc-popBody{ padding:12px; }
+.tc-popTitle{
+  font-weight:950;
+  font-size:13px;
+  line-height:1.15;
+  margin:0 0 8px;
+  letter-spacing:-.1px;
+}
+.tc-popMetaLine{
+  font-weight:950;
+  font-size:12px;
+  opacity:.95;
+}
+.tc-popDealerLine{
+  margin-top:8px;
+  font-size:11px;
+  font-weight:850;
+  opacity:.78;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.tc-popDealerLine .tc-dot{ opacity:.5; }
+
+.tc-popCta{
+  width:100%;
+  margin-top:12px;
+  padding:10px 10px;
+  border-radius:14px;
+  border:1px solid rgba(63,177,206,.55);
+  background:rgba(63,177,206,.18);
+  font-weight:950;
+  cursor:pointer;
+  text-align:center;
+  color:inherit;
+}
+.tc-popCta:hover{
+  background:rgba(63,177,206,.24);
+  border-color:rgba(63,177,206,.70);
+}
+
+/* Mapbox popup shell */
+.mapboxgl-popup{ z-index:30; }
+.mapboxgl-popup-content{
+  padding:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  max-width:none !important;
+}
 

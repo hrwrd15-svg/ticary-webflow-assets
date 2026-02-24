@@ -6671,4 +6671,62 @@ body.tc-filter-panel-open{
   touch-action: none;
 }
 
+/* Map popup carousel buttons — blue circle, white arrow */
+.as-pop-btn{
+  background:#3fb1ce!important;
+  border-color:#3fb1ce!important;
+}
+.as-pop-btn svg,
+.as-pop-btn::before,
+.as-pop-btn::after{
+  fill:#fff!important;
+  stroke:#fff!important;
+}
+.as-pop-btn:hover{filter:brightness(.9);}
+
+/* Filter collapse +/- — improve visibility in light theme */
+:root[data-theme="light"] .chev{
+  border-color:#3fb1ce!important;
+}
+:root[data-theme="light"] .chev::before,
+:root[data-theme="light"] .chev::after{
+  background:#3fb1ce!important;
+}
+
+/* FORCE FILTER HEADER ICONS TO TICARY BLUE */
+#asf-distance h5::before,
+#asf-vehicle  h5::before,
+#asf-year     h5::before,
+#asf-price    h5::before,
+#asf-mileage  h5::before{
+  /* same icon shapes, just stroke swapped to #3fb1ce */
+  background-image: none !important;
+}
+
+/* Distance (pin) */
+#asf-distance h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s6-4 6-11a6 6 0 1 0-12 0c0 7 6 11 6 11z'/><path d='M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>") !important;
+}
+
+/* Vehicle (car) */
+#asf-vehicle h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 16.5h11'/><path d='M5 16l1.6-5.2A3 3 0 0 1 9.5 8.8h5A3 3 0 0 1 17.4 10.8L19 16'/><path d='M6 16v2'/><path d='M18 16v2'/><circle cx='8' cy='18' r='1.5'/><circle cx='16' cy='18' r='1.5'/></svg>") !important;
+}
+
+/* Year (calendar) */
+#asf-year h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M16 3v4M8 3v4M3 9h18'/></svg>") !important;
+}
+
+/* Price */
+#asf-price h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8 20h10'/><path d='M10 20V7a4 4 0 0 1 4-4h2'/><path d='M8 12h8'/></svg>") !important;
+}
+
+/* Mileage (speedo) */
+#asf-mileage h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb1ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 13a8 8 0 1 0-16 0'/><path d='M12 13l4-4'/><path d='M6 19h12'/></svg>") !important;
+}
+
+
 

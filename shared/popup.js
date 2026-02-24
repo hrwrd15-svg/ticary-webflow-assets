@@ -1709,3 +1709,285 @@ console.log("✅ popup.js loaded (GitHub)");
   });
 
 })();
+
+(function(){
+  if (window.__tcDealerSave_snapshot_v1) return;
+  window.__tcDealerSave_snapshot_v1 = 1;
+
+  const API_BASE = 'https://vehicle-api-espm.onrender.com';
+  const $ = (s,r=document)=>r.querySelector(s);
+
+  const log = (...a)=>{ try{ console.log('[dealer-saves]', ...a); }catch(_){} };
+  const warn = (...a)=>{ try{ console.warn('[dealer-saves]', ...a); }catch(_){} };
+
+  // ✅ Capture which vehicle was clicked to open the modal
+  window.__tcLastVehicleId = window.__tcLastVehicleId || null;
+  document.addEventListener('click', (e) => {
+    const card = e.target?.closest?.('[data-vehicle-id]');
+    const vid = card?.getAttribute('data-vehicle-id');
+    if (vid){
+      window.__tcLastVehicleId = String(vid).trim();
+      //log('captured vehicle_id', window.__tcLastVehicleId);
+    }
+  }, true);
+
+  // ---- auth token helpers (Supabase) ----
+  function getAccessToken(){
+    try{
+      const k = Object.keys(localStorage).find(x => /^sb-.*-auth-token$/.test(x));
+      if (!k) return null;
+      const raw = localStorage.getItem(k);
+      if (!raw) return null;
+      const j = JSON.parse(raw);
+      return j?.access_token || j?.currentSession?.access_token || null;
+    }catch(_){ return null; }
+  }
+  function authHeaders(){
+    const t = getAccessToken();
+    if (!t) return null;
+    return { "Authorization": "Bearer " + t };
+  }
+
+  function modalOpen(){
+    const ov = $('#tcdm-overlay');
+    return !!(ov && ov.classList.contains('is-open'));
+  }
+
+  function ensureInlinePill(){
+    const nameEl = $('#tcdm-dealerName');
+    if (!nameEl) return null;
+
+    let pill = nameEl.querySelector('.tcdm-likeInline');
+    if (pill) return pill;
+
+    pill = document.createElement('span');
+    pill.className = 'tcdm-likeInline';
+    pill.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3h-4z"></path>
+        <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+      </svg>
+      <span class="tcdm-likeCount">0</span>
+    `;
+    nameEl.insertBefore(pill, nameEl.firstChild);
+    return pill;
+  }
+
+  function getOrCreateSaveButton(){
+    const block = $('#tcdm-dealerBlock');
+    if (!block) return null;
+
+    let btn = block.querySelector('.tcdm-saveDealerBtn');
+    if (!btn){
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tcdm-saveDealerBtn';
+      btn.style.width = '100%';
+      btn.style.display = 'inline-flex';
+      btn.style.alignItems = 'center';
+      btn.style.justifyContent = 'center';
+      btn.style.gap = '8px';
+      btn.style.padding = '10px 12px';
+      btn.style.borderRadius = '12px';
+      btn.style.border = '1px solid rgba(63,177,206,.40)';
+      btn.style.background = 'rgba(63,177,206,.14)';
+      btn.style.color = 'var(--tc-text)';
+      btn.style.fontSize = '12px';
+      btn.style.fontWeight = '900';
+      btn.style.cursor = 'pointer';
+      btn.style.marginBottom = '10px';
+      btn.style.transition = 'transform .14s ease, background .14s ease, border-color .14s ease';
+      btn.textContent = '★ Save dealer';
+
+      block.insertBefore(btn, block.firstChild);
+    }
+    return btn;
+  }
+
+  function setCount(n){
+    const pill = ensureInlinePill();
+    const c = pill?.querySelector('.tcdm-likeCount');
+    if (c) c.textContent = String(Math.max(0, Number(n)||0));
+  }
+
+  function setSavedUI(saved){
+    const btn = getOrCreateSaveButton();
+    if (!btn) return;
+    btn.classList.toggle('is-on', !!saved);
+    btn.textContent = saved ? '✓ Dealer saved' : '★ Save dealer';
+  }
+
+  function setDisabled(msg){
+    const btn = getOrCreateSaveButton();
+    if (!btn) return;
+    btn.classList.add('is-disabled');
+    btn.classList.remove('is-on','is-loading');
+    btn.textContent = msg;
+  }
+
+  function setLoading(on){
+    const btn = getOrCreateSaveButton();
+    if (!btn) return;
+    btn.classList.toggle('is-loading', !!on);
+  }
+
+  // ✅ Find dealer_id from snapshot list
+  function resolveDealerIdFromSnapshot(){
+    const vid = String(window.__tcLastVehicleId || '').trim();
+    if (!vid) return '';
+
+    const cars = window.__ticaryCars;
+    if (!Array.isArray(cars) || !cars.length) return '';
+
+    const car = cars.find(x => String(x?.id ?? x?.vehicle_id ?? '').trim() === vid);
+    if (!car) return '';
+
+    const did = car?.dealer_id ?? car?.dealerId ?? car?.dealerID ?? '';
+    const digits = String(did || '').replace(/\D+/g,'');
+    return digits || '';
+  }
+
+  async function apiGetStatus(dealer_id){
+    const h = authHeaders();
+    if (!h) return { __noauth:true };
+    const url = `${API_BASE}/me/dealer-saves/status?dealer_id=${encodeURIComponent(dealer_id)}`;
+    try{
+      const r = await fetch(url, { headers: h });
+      if (!r.ok) return { __err:true, status:r.status, text: await r.text().catch(()=> '') };
+      return await r.json();
+    }catch(e){
+      return { __err:true, status:0, text:String(e) };
+    }
+  }
+
+  async function apiToggle(dealer_id){
+    const h = authHeaders();
+    if (!h) return { __noauth:true };
+    try{
+      const r = await fetch(`${API_BASE}/me/dealer-saves/toggle`, {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type':'application/json' }, h),
+        body: JSON.stringify({ dealer_id })
+      });
+      if (!r.ok) return { __err:true, status:r.status, text: await r.text().catch(()=> '') };
+      return await r.json();
+    }catch(e){
+      return { __err:true, status:0, text:String(e) };
+    }
+  }
+
+  let lastDealerId = null;
+  let inflight = false;
+
+  async function refresh(){
+    if (!modalOpen()) return;
+
+    ensureInlinePill();
+    const btn = getOrCreateSaveButton();
+    if (!btn) return;
+
+    const h = authHeaders();
+    if (!h){
+      setCount(0);
+      setDisabled('Log in to save dealer');
+      return;
+    } else {
+      btn.classList.remove('is-disabled');
+    }
+
+    const dealer_id = resolveDealerIdFromSnapshot();
+
+    // Helpful debug if it fails:
+    if (!dealer_id){
+      setCount(0);
+      setDisabled('Dealer unavailable');
+      // Uncomment if you want to see why:
+      //log('missing dealer_id', { vid: window.__tcLastVehicleId, cars: Array.isArray(window.__ticaryCars)?window.__ticaryCars.length:0 });
+      return;
+    }
+
+    if (dealer_id === lastDealerId && !inflight) return;
+    lastDealerId = dealer_id;
+
+    inflight = true;
+    setLoading(true);
+
+    const res = await apiGetStatus(dealer_id);
+
+    inflight = false;
+    setLoading(false);
+
+    if (res?.__noauth){
+      setCount(0);
+      setDisabled('Log in to save dealer');
+      return;
+    }
+    if (res?.__err){
+      warn('status failed', res.status, res.text);
+      return;
+    }
+
+    setCount(res.total_saves ?? 0);
+    setSavedUI(!!res.is_saved);
+  }
+
+  function wireOnce(){
+    const btn = getOrCreateSaveButton();
+    if (!btn || btn.__wired) return;
+    btn.__wired = true;
+
+    btn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (btn.classList.contains('is-loading')) return;
+      if (!modalOpen()) return;
+
+      const h = authHeaders();
+      if (!h){
+        setDisabled('Log in to save dealer');
+        return;
+      }
+
+      const dealer_id = resolveDealerIdFromSnapshot();
+      if (!dealer_id){
+        setDisabled('Dealer unavailable');
+        return;
+      }
+
+      setLoading(true);
+      const res = await apiToggle(dealer_id);
+      setLoading(false);
+
+      if (res?.__noauth){
+        setDisabled('Log in to save dealer');
+        return;
+      }
+      if (res?.__err){
+        warn('toggle failed', res.status, res.text);
+        return;
+      }
+
+      setCount(res.total_saves ?? 0);
+      setSavedUI(!!res.is_saved);
+    }, true);
+  }
+
+  let lastOpen = false;
+  let ticks = 0;
+
+  setInterval(()=>{
+    const open = modalOpen();
+    if (open && (!lastOpen || ticks < 10)){
+      ticks++;
+      wireOnce();
+      refresh();
+    } else if (!open){
+      ticks = 0;
+      lastDealerId = null;
+      inflight = false;
+    }
+    lastOpen = open;
+  }, 140);
+
+})();

@@ -572,6 +572,8 @@
     const inner = qs('.th-inner', header) || header;
     const cta   = qs('.th-cta', header) || inner;
 
+     document.querySelectorAll('.tc-prof-wrap').forEach(el => el.remove());
+
     // Build button (only once)
     if (!qs('.tc-mnav-btn', header)){
       const btn = document.createElement('button');
@@ -641,12 +643,17 @@
       account.className = 'tc-account-link';
       linksBox.appendChild(account);
 
+      const garage = document.createElement('a');
+      garage.href = '/my-garage';
+      garage.textContent = 'My Garage';
+      garage.className = 'tc-garage-link';
+      linksBox.appendChild(garage);
+
       const logout = document.createElement('a');
       logout.href = '#';
       logout.textContent = 'Log out';
       logout.className = 'tc-logout-btn';
-      linksBox.appendChild(logout);   
-     }
+      linksBox.appendChild(logout);
     
     // Always (re)bind controls safely
     const btn   = qs('.tc-mnav-btn', header);

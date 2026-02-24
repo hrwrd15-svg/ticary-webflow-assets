@@ -2996,3 +2996,146 @@ html.tc-logged-in .tc-logout-btn{ display: inline-flex; }
   }
 }
 
+/* =========================================================
+   TICARY – Search page: Header hover mega-panels (V2)
+   - waits for header/nav
+   - BLACK panel in dark theme
+   - Ticary blue accent/glow in both themes
+========================================================= */
+
+@media (min-width: 900px){
+
+  /* Important: allow dropdown to render outside header */
+  #tc-header.th-wrap{
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    overflow: visible !important;
+  }
+
+  /* Injected container sits under header */
+  #tc-header .tc-mega-wrap{
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    width: 100%;
+    pointer-events: none;
+    z-index: 998;
+  }
+
+  /* The dropdown panel */
+  #tc-header .tc-mega-panel{
+    width: min(1180px, 94vw);
+    margin: 10px auto 0;
+
+    /* Dark theme: true black */
+    background: #000000;
+
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 18px;
+
+    /* Ticary blue accent */
+    border-top: 1px solid rgba(63,177,206,0.55);
+
+    /* Soft glow */
+    box-shadow:
+      0 30px 70px rgba(0,0,0,.6),
+      0 0 0 1px rgba(63,177,206,0.18),
+      0 12px 40px rgba(63,177,206,0.22);
+
+    overflow: hidden;
+
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 160ms ease, transform 180ms ease;
+    pointer-events: none;
+  }
+
+  /* Light theme: keep white but add blue accent/glow */
+  :root[data-theme="light"] #tc-header .tc-mega-panel{
+    background: #ffffff;
+    border-color: rgba(0,0,0,.08);
+
+    border-top: 1px solid rgba(63,177,206,0.45);
+
+    box-shadow:
+      0 26px 60px rgba(15,20,24,.18),
+      0 0 0 1px rgba(63,177,206,0.12),
+      0 10px 30px rgba(63,177,206,0.18);
+  }
+
+  /* Visible state */
+  #tc-header.tc-mega-open .tc-mega-panel{
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  /* Placeholder “heycar-ish” columns */
+  #tc-header .tc-mega-grid{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #tc-header .tc-mega-col{
+    padding: 26px 26px 22px;
+    min-height: 220px;
+  }
+
+  /* Column dividers */
+  #tc-header .tc-mega-col + .tc-mega-col{
+    border-left: 1px solid rgba(255,255,255,.10);
+  }
+  :root[data-theme="light"] #tc-header .tc-mega-col + .tc-mega-col{
+    border-left-color: rgba(0,0,0,.10);
+  }
+
+  /* Headings + placeholder lines */
+  #tc-header .tc-mega-title{
+    font-size: 1.25rem;
+    font-weight: 900;
+    margin: 0 0 16px;
+    color: var(--th-text, #e8f0f5);
+  }
+  :root[data-theme="light"] #tc-header .tc-mega-title{ color:#11161b; }
+
+  #tc-header .tc-mega-line{
+    height: 12px;
+    border-radius: 999px;
+    margin: 12px 0;
+    width: 78%;
+    background: rgba(255,255,255,.10);
+  }
+  #tc-header .tc-mega-line:nth-child(3){ width:64%; }
+  #tc-header .tc-mega-line:nth-child(4){ width:70%; }
+  #tc-header .tc-mega-line:nth-child(5){ width:52%; }
+  :root[data-theme="light"] #tc-header .tc-mega-line{
+    background: rgba(15,20,24,.10);
+  }
+
+  #tc-header .tc-mega-viewall{
+    display: inline-block;
+    margin-top: 16px;
+    font-weight: 800;
+    color: var(--th-text, #e8f0f5);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  :root[data-theme="light"] #tc-header .tc-mega-viewall{ color:#11161b; }
+}
+
+/* Mobile: HARD disable mega panels (prevents unstyled "View all / FAQ / Best picks") */
+@media (max-width: 899px){
+  #tc-header .tc-mega-wrap,
+  #tc-header .tc-mega-panel{
+    display: none !important;
+  }
+  #tc-header.tc-mega-open{
+    /* if JS added the class, this kills any chance of it showing */
+    pointer-events: auto !important;
+  }
+}
+
+
+

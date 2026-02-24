@@ -8045,3 +8045,26 @@ body.tc-filter-panel-open{
   opacity:.85;
   cursor:progress;
 }
+
+/* === VEHICLE CARD STYLING OVERRIDES === */
+
+/* Remove rounded corners from vehicle cards */
+.as-card {
+  border-radius: 0 !important;
+}
+
+/* Remove rounded corners from price pill and position it flush in top-left */
+.as-price,
+.as-chip-price {
+  border-radius: 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  z-index: 10 !important;
+}
+
+/* Ensure card has relative positioning for absolute child positioning */
+.as-card {
+  position: relative !important;
+}

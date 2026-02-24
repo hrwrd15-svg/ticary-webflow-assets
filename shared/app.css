@@ -3293,4 +3293,1295 @@ html.tc-logged-in .tc-logout-btn{ display: inline-flex; }
   }
 }
 
+/* FORCE HIDE OLD ELEMENTS */
+.asq-wrap, .searchbar, [data-searchbar],
+.as-listbar:not(.as-listbar-new) { 
+  display: none !important; 
+}
+
+#asf-search, .asf-sec#asf-search { display: none !important; }
+
+/* Remove sticky from filters */
+.as-filter, .as-filters, #as-filters, .ds-filters { 
+  position: static !important; 
+  top: auto !important;
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* =========================================================
+   Layout controls – animated (desktop)
+   Replaces the old display:none layout controls block
+========================================================= */
+
+@media (min-width: 769px){
+
+  /* Animate the grid columns so main never drops under */
+  .as-grid{
+    transition: grid-template-columns 280ms cubic-bezier(.2,.8,.2,1);
+    grid-template-columns: 360px 1fr;  /* filters width, tweak if needed */
+  }
+  body.as-no-filters .as-grid{
+    grid-template-columns: 0px 1fr;
+  }
+
+  /* Lock placement */
+  .as-col--filters{ grid-column: 1 !important; grid-row: 1 !important; }
+  #as-main, .as-main{ grid-column: 2 !important; grid-row: 1 !important; }
+
+  /* Keep filters in DOM (so it can animate) */
+  body.as-no-filters .as-col--filters,
+  body.as-no-filters .as-filter{
+    display: block !important;
+  }
+
+  /* Panel fade/slide for premium feel */
+  .as-filter{
+    will-change: opacity, transform;
+    transition: opacity 220ms cubic-bezier(.2,.8,.2,1),
+                transform 280ms cubic-bezier(.2,.8,.2,1);
+    opacity: 1;
+    transform: translateX(0);
+  }
+  body.as-no-filters .as-filter{
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .as-grid, .as-filter{ transition: none !important; }
+}
+
+
+/* Mobile filters drawer – match favourites panel behaviour */
+@media (max-width: 768px) {
+  /* Lock page behind the drawer */
+  html body.as-mobile-filters-open {
+    overflow: hidden;
+  }
+
+  /* Header bar inside the drawer (hidden by default) */
+  .asf-mobile-head {
+    display: none;
+  }
+
+  /* Outer panel: fixed full-screen, no scroll (like .th-fav-panel) */
+  body.as-mobile-filters-open #as-filters {
+    position: fixed !important;
+    inset: 0;
+    z-index: 999;
+    background: var(--as-bg);   /* theme-aware */
+    padding: 10px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;           /* body below handles the scroll */
+  }
+
+  /* Inner body: scrollable column (like .th-fav-panel-body) */
+  body.as-mobile-filters-open #as-filters-body {
+    position: static !important;
+    flex: 1 1 auto;
+    margin: 0;
+    padding: 0;
+    max-width: 100vw;
+    width: 100vw;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;        /* vertical only */
+  }
+
+  body.as-mobile-filters-open .as-col--filters {
+    max-width: 100vw !important;
+    width: 100vw !important;
+  }
+
+  /* Show the mobile header only in drawer mode */
+  body.as-mobile-filters-open .asf-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 2px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--as-panel);
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+    color: var(--as-text);
+  }
+
+  .asf-mobile-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .asf-mobile-close {
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.15);
+    padding: 6px 14px;
+    background: var(--as-panel);
+    color: var(--as-text);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+}
+
+
+/* --- Mobile filters: kill sideways dragging & horizontal scroll --- */
+@media (max-width: 768px){
+  body.as-mobile-filters-open #as-filters,
+  body.as-mobile-filters-open #as-filters-body{
+    max-width: 100vw;
+    width: 100vw;
+    overflow-x: hidden;
+    touch-action: pan-y;   /* only vertical scrolling */
+  }
+
+  body.as-mobile-filters-open .as-col--filters{
+    max-width: 100vw;
+    width: 100vw;
+  }
+}
+/* --- Mobile filters header: light theme styling --- */
+@media (max-width: 768px){
+  :root[data-theme="light"] body.as-mobile-filters-open #as-filters,
+  :root[data-theme="light"] body.as-mobile-filters-open #as-filters-body{
+    background: #f4f5f7;
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-head{
+    background: #ffffff;
+    color: #11161b;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-title{
+    color: #11161b;
+  }
+
+  :root[data-theme="light"] body.as-mobile-filters-open .asf-mobile-close{
+    background: #ffffff;
+    color: #11161b;
+    border-color: rgba(0,0,0,0.15);
+  }
+}
+
+
+body.as-no-map .as-mapwrap { 
+  display: none !important; 
+}
+
+:root { 
+  --as-pin: #3FB1CE;
+  --as-pop-w: 280px;
+}
+
+/* Grid */
+[data-as-grid="1"] { 
+  display: grid !important; 
+  grid-template-columns: repeat(2, minmax(0, 1fr)); 
+  gap: clamp(14px, 1.8vw, 18px); 
+}
+@media (min-width: 960px) { 
+  [data-as-grid="1"] { 
+    grid-template-columns: repeat(3, minmax(0, 1fr)); 
+  } 
+}
+@media (min-width: 1600px) { 
+  [data-as-grid="1"] { 
+    grid-template-columns: repeat(4, minmax(0, 1fr)); 
+  } 
+}
+
+/* Map container (visuals only – animation handled later) */
+.as-mapwrap{
+  background: #0b0f14;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 0;               /* keep “slotted” look */
+  margin: 0 !important;           /* no gaps */
+}
+
+#as-map {
+  width: 100%;
+  height: clamp(420px, 52vh, 680px);
+  position: relative;
+}
+
+/* Map pins */
+.as-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 16px;
+  background: var(--as-pin);
+  border: 2px solid #fff;
+  color: #fff;
+  font: 700 13px/1 system-ui;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,0,0,.4);
+  transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+.as-pin:hover {
+  transform: scale(1.2);
+  z-index: 10;
+}
+.as-pin--single {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0;
+}
+
+/* Map popup */
+.mapboxgl-popup {
+  max-width: var(--as-pop-w);
+}
+.mapboxgl-popup-content {
+  width: var(--as-pop-w);
+  padding: 0;
+  background: #161c22;
+  color: #e8f0f5;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.5);
+}
+.mapboxgl-popup-close-button {
+  color: #cfd9e3;
+  font-size: 18px;
+  padding: 8px 10px;
+  opacity: 0.9;
+}
+
+.as-pop {
+  display: flex;
+  flex-direction: column;
+}
+.as-pop-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/2;
+  background: #0f1418 center/cover no-repeat;
+  border-radius: 12px 12px 0 0;
+}
+.as-pop-price {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.25);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #fff;
+}
+.as-pop-ind {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.2);
+  font-size: 0.8rem;
+  color: #fff;
+  opacity: 0.95;
+}
+.as-pop-nav {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 10;
+}
+.as-pop-btn {
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all .15s;
+}
+.as-pop-btn:hover {
+  background: rgba(0,0,0,.85);
+  transform: scale(1.1);
+}
+.as-pop-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.as-pop-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.as-pop-title {
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.as-pop-meta {
+  opacity: 0.9;
+  font-size: 0.88rem;
+}
+.as-pop-specs {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.as-pop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.as-pop-view {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.2);
+  color: #e8f0f5;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.as-pop-view:hover {
+  border-color: var(--as-pin);
+  background: rgba(63,177,206,.15);
+}
+.as-pop-heart {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.2);
+  cursor: pointer;
+}
+.as-pop-heart:hover {
+  border-color: rgba(255,255,255,.35);
+}
+.as-pop-heart svg {
+  width: 18px;
+  height: 18px;
+}
+.as-pop-heart svg path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+}
+.as-pop-heart[aria-pressed="true"] svg path {
+  fill: #ff4d6d;
+  stroke: #ff4d6d;
+}
+
+/* Toolbar */
+.as-listbar-new {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  background: #11161b;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+}
+.as-listbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.as-listbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Filter tags in toolbar */
+.as-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 8px;
+}
+.as-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(63,177,206,.15);
+  border: 1px solid rgba(63,177,206,.35);
+  color: var(--as-pin);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.as-filter-tag button {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.8;
+}
+.as-filter-tag button:hover {
+  opacity: 1;
+}
+
+#as-sort-new {
+  padding: 0 46px 0 16px;
+  height: 48px;
+  font-size: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: var(--as-pin);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+}
+#as-sort-new option {
+  color: #0A0E12;
+}
+
+.as-ctrl-new {
+  height: 48px;
+  padding: 0 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: var(--as-pin);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.as-ctrl-new:hover {
+  filter: brightness(1.1);
+}
+
+/* Cards */
+.as-card {
+  background: #161c22;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform .18s, box-shadow .18s;
+}
+.as-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(0,0,0,.35);
+}
+.as-link {
+  position: relative;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.as-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: #0f1418 center/cover no-repeat;
+}
+.as-price-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(16,22,29,.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--as-pin);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #e8f0f5;
+}
+.as-body {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 8px;
+  flex: 1;
+}
+.as-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  white-space: nowrap;
+  min-width: 0;
+}
+.as-make {
+  font-weight: 800;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.as-model {
+  font-weight: 700;
+  font-size: 1.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.as-meta {
+  opacity: 0.9;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.as-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  text-decoration: none;
+  color: #e8f0f5;
+  margin-top: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.as-cta:hover {
+  border-color: var(--as-pin);
+  background: rgba(63,177,206,.1);
+}
+
+/* Heart button */
+.as-fav-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.25);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+.as-fav-btn:hover {
+  border-color: rgba(255,255,255,.35);
+  transform: scale(1.05);
+}
+.as-fav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.as-fav-btn svg path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+}
+.as-fav-btn[aria-pressed="true"] svg path {
+  fill: #ff4d6d;
+  stroke: #ff4d6d;
+}
+
+/* No results - FIXED icon size */
+.as-no-results {
+  text-align: center;
+  padding: 80px 20px;
+  color: #c9d3dc;
+  background: #161c22;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.06);
+  grid-column: 1/-1;
+}
+.as-no-results svg {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  opacity: 0.5;
+}
+.as-no-results h3 {
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+}
+.as-no-results p {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
+/* More button */
+#as-more {
+  display: block;
+  width: fit-content !important;
+  padding: 14px 28px;
+  margin: 20px auto 32px;
+  border-radius: 14px;
+  background: var(--as-pin) !important;
+  color: #fff !important;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* FILTERS - EXACT ORIGINAL STRUCTURE */
+.asf { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 14px; 
+}
+.asf-sec { 
+  border: 1px solid rgba(255,255,255,.06); 
+  border-radius: 14px; 
+  background: #11161b; 
+  overflow: hidden; 
+}
+.asf-sec > header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 14px 16px; 
+  cursor: pointer;
+  user-select: none;
+}
+.asf-sec > header h5 { 
+  margin: 0; 
+  font-size: 1rem; 
+  font-weight: 800; 
+}
+.chev { 
+  width: 18px; 
+  height: 18px; 
+  position: relative;
+  flex-shrink: 0;
+}
+.chev:before, .chev:after { 
+  content: ""; 
+  position: absolute; 
+  inset: 0; 
+  margin: auto; 
+  width: 10px; 
+  height: 2px; 
+  background: #e8f0f5; 
+  border-radius: 1px; 
+  transition: transform .18s; 
+}
+.chev:after { 
+  transform: rotate(90deg); 
+}
+.asf-sec[data-open="true"] .chev:after { 
+  transform: rotate(0); 
+}
+.asf-body { 
+  display: none; 
+  padding: 14px 16px 18px; 
+}
+.asf-sec[data-open="true"] .asf-body { 
+  display: block; 
+}
+.row { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 8px; 
+  margin-bottom: 12px; 
+}
+.row:last-child { 
+  margin-bottom: 0; 
+}
+.row label { 
+  font-size: 0.9rem; 
+  font-weight: 600; 
+  opacity: 0.85; 
+}
+.asf select, 
+.asf input[type="number"], 
+.asf input[type="text"] {
+  width: 100%; 
+  height: 42px; 
+  border-radius: 12px; 
+  border: 1px solid rgba(255,255,255,.15);
+  background: #0f1418; 
+  color: #e8f0f5; 
+  padding: 0 12px; 
+  outline: none; 
+  font-size: 0.95rem;
+}
+.asf select:disabled, 
+.asf input:disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+}
+.asf select:focus, 
+.asf input:focus { 
+  border-color: rgba(63,177,206,.5); 
+}
+.grid-2 { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 8px; 
+}
+.btnbar { 
+  display: flex; 
+  gap: 8px; 
+  flex-wrap: wrap; 
+}
+.btnbar .btn {
+  flex: 1;
+  min-width: 100px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.15);
+  color: #e8f0f5;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.btn.apply {
+  background: var(--as-pin) !important;
+  color: #fff !important;
+  border-color: rgba(0,0,0,.12);
+}
+.btn:hover {
+  filter: brightness(1.1);
+}
+.help { 
+  font-size: 0.85rem; 
+  opacity: 0.8; 
+  margin-top: 6px; 
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.12);
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 8px 0;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--as-pin);
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--as-pin);
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+/* === HARD OVERRIDE: mobile filters drawer behaves like favourites === */
+@media (max-width: 768px) {
+
+  /* Lock the page behind the drawer */
+  html body.as-mobile-filters-open {
+    overflow: hidden !important;
+  }
+
+  /* OUTER PANEL: fixed full-screen shell, no scrolling */
+  body.as-mobile-filters-open #as-filters {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    padding: 10px 12px 16px !important;
+    background: var(--as-bg) !important;
+
+    overflow: hidden !important;          /* body inside handles scroll */
+    max-width: 100vw !important;
+    width: 100vw !important;
+  }
+
+  /* INNER BODY: the only thing that scrolls (like favourites body) */
+  body.as-mobile-filters-open #as-filters-body {
+    position: static !important;
+    flex: 1 1 auto !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y !important;       /* vertical only */
+  }
+
+  /* Make sure the filters column can’t overflow horizontally */
+  body.as-mobile-filters-open .as-col--filters {
+    max-width: 100vw !important;
+    width: 100vw !important;
+  }
+}
+
+/* =========================================================
+   Map open/close – smooth slide + flicker mask (desktop)
+========================================================= */
+
+@media (min-width: 769px){
+
+  .as-mapwrap{
+    display: block !important;
+    overflow: hidden !important;
+    position: relative !important;
+
+    will-change: max-height, opacity, transform;
+    transition:
+      max-height 320ms cubic-bezier(.2,.8,.2,1),
+      opacity    220ms cubic-bezier(.2,.8,.2,1),
+      transform  320ms cubic-bezier(.2,.8,.2,1);
+
+    max-height: 1200px;         /* open cap */
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  body.as-no-map .as-mapwrap{
+  display: block !important;
+  max-height: 0px !important;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+
+  /* Flicker mask (only while JS adds body.tc-map-mask) */
+  .as-mapwrap::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: #0b1220 !important;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity 120ms ease;
+    z-index: 5;
+  }
+ 
+ /* Light theme: force mask to white (only when mask is active) */
+:root[data-theme="light"] body.tc-map-mask .as-mapwrap::after{
+  background: #ffffff !important;
+}
+
+  body.tc-map-mask .as-mapwrap::after{ opacity: 1; }
+
+  /* Optional: hide map while masked (prevents seeing a black frame) */
+  body.tc-map-mask #as-map{ opacity: 0; transition: opacity 120ms ease; }
+  body:not(.tc-map-mask) #as-map{ opacity: 1; transition: opacity 120ms ease; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .as-mapwrap, .as-mapwrap::after, #as-map{ transition: none !important; }
+}
+
+
+/* =========================================================
+   Remove stray divider line between MAP and TOOLBAR
+========================================================= */
+
+/* Kill any bottom border/shadow on the map container */
+.as-mapwrap{
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* In case the actual map element has a border */
+#as-map,
+#as-map *{
+  border-bottom: 0 !important;
+}
+
+/* If the divider is coming from a generic "panel" rule */
+.as-mapwrap + .as-listbar-new{
+  border-top: 0 !important;
+}
+
+/* =========================================================
+   RESULTS: inner padding + tighter spacing + rounded cards
+   (Targets the REAL container: #vehiclesList)
+========================================================= */
+
+/* Add inner padding so the grid isn’t flush to edges */
+#vehiclesList{
+  padding: 14px !important;
+  box-sizing: border-box !important;
+}
+
+/* Keep the grid columns exactly as-is, just tighten gap a touch */
+#vehiclesList[data-as-grid="1"]{
+  gap: 12px !important;          /* was clamp(14px..18px) */
+  row-gap: 12px !important;
+  column-gap: 12px !important;
+}
+
+/* Rounded cards back (your preferred look) */
+#vehiclesList .as-card{
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+/* Mobile: slightly smaller gutter */
+@media (max-width: 768px){
+  #vehiclesList{
+    padding: 12px !important;
+  }
+  #vehiclesList[data-as-grid="1"]{
+    gap: 10px !important;
+  }
+}
+
+/* =========================================================
+   TICARY FILTERS – flat rows + dividers + darker body only
+   (clean version: no duplicate overrides)
+========================================================= */
+
+/* Remove outer gutter around filters column */
+.as-col--filters,
+#as-filters,
+.as-filter{
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Stack: no gaps */
+.asf{ gap: 0 !important; }
+
+/* Section rows: no card look, just dividers */
+.asf-sec{
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+}
+.asf-sec:first-child{
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+}
+:root[data-theme="light"] .asf-sec{
+  border-bottom-color: rgba(0,0,0,.10) !important;
+}
+:root[data-theme="light"] .asf-sec:first-child{
+  border-top-color: rgba(0,0,0,.10) !important;
+}
+
+/* Header row: consistent background always (NO darken on open) */
+.asf-sec > header{
+  padding: 16px 16px !important;
+  border-radius: 0 !important;
+  background: #11161b !important;
+}
+:root[data-theme="light"] .asf-sec > header{
+  background: #ffffff !important;
+  color: #11161b !important;
+}
+
+/* Make sure the section wrapper never “tints” when open */
+.asf-sec[data-open="true"]{
+  background: transparent !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Header label sizing + layout */
+.asf-sec > header h5{
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  font-size: 1.12rem !important;   /* bigger Distance/Vehicle/Year etc */
+  font-weight: 850 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Plus/minus icon in light theme */
+:root[data-theme="light"] .chev:before,
+:root[data-theme="light"] .chev:after{
+  background: #11161b !important;
+}
+
+/* Body: ONLY this area gets darker “box” background */
+.asf-body{
+  display: none;
+  padding: 12px 14px 16px !important;
+
+  background: #0f1418 !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.asf-sec[data-open="true"] .asf-body{ display: block; }
+
+:root[data-theme="light"] .asf-body{
+  background: #f4f5f7 !important;
+  border-top-color: rgba(0,0,0,.10) !important;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.03);
+}
+
+/* =========================================================
+   Header icons (IDs you gave: asf-distance etc.)
+========================================================= */
+
+/* Icon slot */
+.asf-sec > header h5::before{
+  content:"";
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  flex: 0 0 18px;
+  background-repeat: no-repeat;
+  background-size: 18px 18px;
+  background-position: center;
+  opacity: .95;
+}
+
+/* Distance (pin) – keep yours (it’s fine) */
+#asf-distance h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f0f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s6-4 6-11a6 6 0 1 0-12 0c0 7 6 11 6 11z'/><path d='M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>");
+}
+:root[data-theme="light"] #asf-distance h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311161b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s6-4 6-11a6 6 0 1 0-12 0c0 7 6 11 6 11z'/><path d='M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'/></svg>");
+}
+
+/* Vehicle (car) – cleaner outline */
+#asf-vehicle h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f0f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 16.5h11'/><path d='M5 16l1.6-5.2A3 3 0 0 1 9.5 8.8h5A3 3 0 0 1 17.4 10.8L19 16'/><path d='M6 16v2'/><path d='M18 16v2'/><circle cx='8' cy='18' r='1.5'/><circle cx='16' cy='18' r='1.5'/></svg>");
+}
+:root[data-theme="light"] #asf-vehicle h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311161b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 16.5h11'/><path d='M5 16l1.6-5.2A3 3 0 0 1 9.5 8.8h5A3 3 0 0 1 17.4 10.8L19 16'/><path d='M6 16v2'/><path d='M18 16v2'/><circle cx='8' cy='18' r='1.5'/><circle cx='16' cy='18' r='1.5'/></svg>");
+}
+
+/* Year */
+#asf-year h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f0f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M16 3v4M8 3v4M3 9h18'/></svg>");
+}
+:root[data-theme="light"] #asf-year h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311161b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='2'/><path d='M16 3v4M8 3v4M3 9h18'/></svg>");
+}
+
+/* Price */
+#asf-price h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f0f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8 20h10'/><path d='M10 20V7a4 4 0 0 1 4-4h2'/><path d='M8 12h8'/></svg>");
+}
+:root[data-theme="light"] #asf-price h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311161b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8 20h10'/><path d='M10 20V7a4 4 0 0 1 4-4h2'/><path d='M8 12h8'/></svg>");
+}
+
+/* Mileage */
+#asf-mileage h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8f0f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 13a8 8 0 1 0-16 0'/><path d='M12 13l4-4'/><path d='M6 19h12'/></svg>");
+}
+:root[data-theme="light"] #asf-mileage h5::before{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2311161b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 13a8 8 0 1 0-16 0'/><path d='M12 13l4-4'/><path d='M6 19h12'/></svg>");
+}
+
+/* =========================================================
+   KILL FILTER COLUMN INSET (outer padding returned)
+========================================================= */
+
+/* The actual column wrapper that creates the inset */
+.as-col--filters{
+  padding: 0 !important;
+}
+
+/* Common inner wrappers in your layout */
+.as-col--filters > div,
+.as-col--filters > section,
+.as-col--filters .w-embed,
+.as-col--filters .w-richtext,
+.as-col--filters .w-dyn-list{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* If the grid itself is introducing spacing between columns */
+.as-grid{
+  column-gap: 0 !important;
+  gap: 0 !important;           /* keeps filters flush to map */
+}
+
+/* =========================================================
+   FILTERS – remove the outer inset padding (working set)
+========================================================= */
+
+/* Hit the column + the main filters containers */
+.as-grid .as-col--filters,
+.as-col--filters,
+#as-filters,
+.as-filter,
+.asf{
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The wrapper that usually causes the “inset” */
+#as-filters-body,
+.asf-body-wrap,
+.as-filter-inner{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Sometimes Webflow wraps embeds with padding/margins */
+.as-col--filters .w-embed{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* =========================================================
+   TOOLBAR – results count emphasis (hard-target)
+========================================================= */
+
+.as-listbar-new .as-count-new,
+.as-listbar-new #as-count-new,
+.as-listbar-new [id="as-count-new"],
+.as-listbar-new [class*="as-count"]{
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* If the number is inside a child span */
+.as-listbar-new .as-count-new span,
+.as-listbar-new #as-count-new span{
+  font-size: 1.25rem !important;
+  font-weight: 900 !important;
+}
+
+/* Theme colors */
+.as-listbar-new .as-count-new,
+.as-listbar-new #as-count-new{
+  color: #ffffff !important;
+}
+:root[data-theme="light"] .as-listbar-new .as-count-new,
+:root[data-theme="light"] .as-listbar-new #as-count-new{
+  color: #11161b !important;
+}
+
+/* =========================================================
+   HEADER – editorial text navigation (non-button)
+========================================================= */
+
+.tc-header-nav{
+  display: flex;
+  align-items: center;
+  gap: 64px;        /* more breathing room between links */
+  margin-left: 40px; /* a bit more space from the logo */
+}
+
+/* Links */
+.tc-nav-link{
+  position: relative;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #cfd9e3;
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  transition: color .15s ease;
+}
+
+/* Subtle underline on hover (not button-y) */
+.tc-nav-link::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-4px;
+  height:2px;
+  background: #3FB1CE; /* Ticary blue */
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.tc-nav-link:hover{
+  color: #ffffff;
+}
+.tc-nav-link:hover::after{
+  opacity: .35;
+  transform: scaleX(1);
+}
+
+/* Light theme */
+:root[data-theme="light"] .tc-nav-link{
+  color: #11161b;
+}
+:root[data-theme="light"] .tc-nav-link:hover{
+  color: #000000;
+}
+
+/* Hide on small screens (can become hamburger later) */
+@media (max-width: 900px){
+  .tc-header-nav{
+    display: none;
+  }
+}
 

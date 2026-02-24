@@ -869,3 +869,83 @@
     if (init() || tries > 40) clearInterval(t);
   }, 150);
 })();
+
+(function(){
+  if (window.__tcFavFieldRestoreV1) return;
+  window.__tcFavFieldRestoreV1 = 1;
+
+  const clean = (t)=> (t ?? "").toString().trim();
+
+  function ensureHiddenField(card, field, value){
+    value = clean(value);
+    if (!value) return;
+
+    let el = card.querySelector(`[fs-list-field="${field}"]`);
+    if (!el){
+      el = document.createElement("span");
+      el.setAttribute("fs-list-field", field);
+      el.style.display = "none";
+      card.appendChild(el);
+    }
+    // keep current content in sync
+    if (el.textContent !== value) el.textContent = value;
+  }
+
+  function extractYearMileage(card){
+    // Try your current visible meta line (common in your builds)
+    const meta = clean(card.querySelector(".as-meta-a")?.textContent);
+    // Examples: "2019 • 42,000 miles" or "2019 · 42,000 miles"
+    const year = (meta.match(/\b(19|20)\d{2}\b/) || [])[0] || "";
+    const miles = (meta.match(/([\d,]+)\s*miles/i) || [])[1] || "";
+    return { year: clean(year), mileage: clean(miles) };
+  }
+
+  function hydrateCard(card){
+    if (!card || card.__tcFavHydrated) return;
+
+    // Pull from current visible UI (adjusts to your newer card layout)
+    const price =
+      clean(card.querySelector(".as-price-badge")?.textContent) ||
+      clean(card.querySelector(".as-price")?.textContent) ||
+      clean(card.querySelector('[fs-list-field="price"]')?.textContent);
+
+    const finance =
+      clean(card.querySelector(".as-finance-inline")?.textContent) ||
+      clean(card.querySelector('[fs-list-field="finance_monthly"]')?.textContent);
+
+    const { year, mileage } = extractYearMileage(card);
+
+    // Restore what the favourites drawer expects
+    ensureHiddenField(card, "price", price);
+    ensureHiddenField(card, "finance_monthly", finance);
+    ensureHiddenField(card, "year", year);
+    ensureHiddenField(card, "mileage", mileage);
+
+    card.__tcFavHydrated = true;
+  }
+
+  function hydrateAll(){
+    document.querySelectorAll(".as-card").forEach(hydrateCard);
+  }
+
+  // Run now + after list updates
+  hydrateAll();
+
+  const listRoot =
+    document.querySelector("#as-grid") ||
+    document.querySelector(".as-grid") ||
+    document.querySelector("#vehiclesList") ||
+    document.querySelector(".w-dyn-items") ||
+    document.querySelector('[role="list"]');
+
+  if (listRoot){
+    const mo = new MutationObserver(() => {
+      // clear hydration flag for new nodes only
+      document.querySelectorAll(".as-card").forEach(card => {
+        if (!card.__tcFavHydrated) hydrateCard(card);
+      });
+    });
+    mo.observe(listRoot, { childList:true, subtree:true });
+  }
+
+})();

@@ -797,3 +797,5 @@
   }
 
 })();
+  }); // <-- closes onReady(init)
+})();  // <-- closes the outer Header Logic Pack IIFE

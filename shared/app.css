@@ -3166,7 +3166,8 @@ html.tc-logged-in .tc-logout-btn{ display: inline-flex; }
 
 
 #tc-header .tc-mnav-btn{
-  display:none;
+  display:inline-flex !important;
+}
   height:44px;
   padding:0 14px;
   border-radius:14px;

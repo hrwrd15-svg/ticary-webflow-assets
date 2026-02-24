@@ -3137,5 +3137,160 @@ html.tc-logged-in .tc-logout-btn{ display: inline-flex; }
   }
 }
 
+/* ================================
+   TICARY — Mobile header drawer
+   (does not affect desktop)
+================================ */
+
+@media (max-width: 900px){
+  /* hide the desktop text links */
+  #tc-header .tc-header-nav{ display:none !important; }
+
+  /* show burger button */
+  #tc-header .tc-mnav-btn{
+    display:inline-flex !important;
+  }
+}
+
+/* Mobile: never show desktop hover dropdown panels */
+@media (max-width: 900px){
+  /* common dropdown/popup containers (covers your stuck open menu) */
+  .th-dd, .th-ddpanel, .th-dropdown, .th-popover, .th-menu, .th-submenu,
+  .th-hoverpanel, .th-flyout, .th-nav-drop, .th-nav-panel{
+    display:none !important;
+    opacity:0 !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+}
+
+
+#tc-header .tc-mnav-btn{
+  display:none;
+  height:44px;
+  padding:0 14px;
+  border-radius:14px;
+  border:1px solid var(--th-border, rgba(255,255,255,.18));
+  background:rgba(255,255,255,.09);
+  color:var(--th-text, #e8f0f5);
+  font-weight:950;
+  letter-spacing:.01em;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+:root[data-theme="light"] #tc-header .tc-mnav-btn{
+  background:rgba(11,18,32,.04);
+  color:rgba(11,18,32,.92);
+  border:1px solid rgba(11,18,32,.14);
+}
+
+#tc-header .tc-mnav-ico{
+  width:18px; height:18px;
+  position:relative;
+  display:inline-block;
+}
+#tc-header .tc-mnav-ico::before,
+#tc-header .tc-mnav-ico::after,
+#tc-header .tc-mnav-ico span{
+  content:"";
+  position:absolute; left:0; right:0;
+  height:2px; border-radius:999px;
+  background:currentColor;
+}
+#tc-header .tc-mnav-ico::before{ top:2px; }
+#tc-header .tc-mnav-ico span{ top:8px; }
+#tc-header .tc-mnav-ico::after{ top:14px; }
+
+/* overlay */
+.tc-mnav-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  z-index:2147482000;
+}
+.tc-mnav-overlay.is-open{ display:block; }
+
+/* drawer */
+.tc-mnav-drawer{
+  position:fixed;
+  top:0; right:0;
+  height:100vh;
+  width:min(360px, 86vw);
+  background:rgba(14,18,24,.98);
+  border-left:1px solid rgba(255,255,255,.12);
+  box-shadow:-30px 0 90px rgba(0,0,0,.55);
+  transform:translateX(110%);
+  transition:transform 220ms ease;
+  z-index:2147482100;
+  padding:18px 16px;
+}
+
+:root[data-theme="light"] .tc-mnav-drawer{
+  background:rgba(255,255,255,.98);
+  border-left:1px solid rgba(11,18,32,.12);
+  box-shadow:-30px 0 90px rgba(11,18,32,.18);
+}
+
+.tc-mnav-drawer.is-open{ transform:translateX(0); }
+
+.tc-mnav-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.tc-mnav-title{
+  font-weight:950;
+  font-size:14px;
+  letter-spacing:.08em;
+  opacity:.85;
+}
+
+.tc-mnav-close{
+  width:40px; height:40px;
+  border-radius:12px;
+  border:1px solid rgba(63,177,206,.55);
+  background:#3fb1ce;
+  color:#fff;
+  font-weight:950;
+  cursor:pointer;
+}
+
+.tc-mnav-links{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+
+.tc-mnav-links a{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 12px;
+  border-radius:14px;
+  text-decoration:none;
+  font-weight:900;
+  color:var(--th-text, #e8f0f5);
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.10);
+}
+
+:root[data-theme="light"] .tc-mnav-links a{
+  color:rgba(11,18,32,.92);
+  background:rgba(11,18,32,.04);
+  border:1px solid rgba(11,18,32,.10);
+}
+
+/* Mobile: hide the header home button/link (logo remains) */
+@media (max-width: 900px){
+  #tc-header :is(a,button)[aria-label*="Home"],
+  #tc-header :is(a,button)[href*="old-home"]:not(.th-logo){
+    display: none !important;
+  }
+}
 
 

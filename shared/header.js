@@ -710,3 +710,162 @@
     boot();
   }
 })();
+
+(function(){
+  if (window.__tcMobileNavV1) return;
+  window.__tcMobileNavV1 = 1;
+
+  function qs(s,r){ return (r||document).querySelector(s); }
+
+  function init(){
+    const header = qs('#tc-header');
+    if (!header) return false;
+
+    const inner = qs('.th-inner', header) || header;
+    const cta   = qs('.th-cta', header) || inner;
+
+    // Build button (only once)
+    if (!qs('.tc-mnav-btn', header)){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tc-mnav-btn';
+      btn.setAttribute('aria-label','Open menu');
+      btn.innerHTML = '<span class="tc-mnav-ico"><span></span></span><span>Menu</span>';
+      cta.appendChild(btn);
+    }
+
+        // Build overlay + drawer (create if missing)
+    let overlay = qs('.tc-mnav-overlay');
+    let drawer  = qs('.tc-mnav-drawer');
+
+    if (!overlay){
+      overlay = document.createElement('div');
+      overlay.className = 'tc-mnav-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    if (!drawer){
+      drawer = document.createElement('div');
+      drawer.className = 'tc-mnav-drawer';
+      drawer.innerHTML = `
+        <div class="tc-mnav-top">
+          <div class="tc-mnav-title">MENU</div>
+          <button class="tc-mnav-close" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="tc-mnav-links"></div>
+      `;
+      document.body.appendChild(drawer);
+
+      // Populate links only once (on first create)
+      const linksBox = qs('.tc-mnav-links', drawer);
+
+      // Home at top
+      const home = document.createElement('a');
+      home.href = 'https://ticary.co.uk/old-home';
+      home.textContent = 'Home';
+      linksBox.appendChild(home);
+
+      // Clone existing header links into drawer
+      const srcLinks = header.querySelectorAll('.tc-header-nav a.tc-nav-link, .tc-header-nav a');
+      srcLinks.forEach(a=>{
+        const href = a.getAttribute('href') || '#';
+        const txt  = (a.textContent || '').trim();
+        if (!txt) return;
+        // avoid duplicating Home if it already exists in nav
+        if (/^home$/i.test(txt)) return;
+             
+        const item = document.createElement('a');
+        item.href = href;
+        item.textContent = txt;
+        linksBox.appendChild(item);
+      });
+    
+          // ---- Auth links (mobile only) ----
+      const login = document.createElement('a');
+      login.href = '/login';
+      login.textContent = 'Log in';
+      login.className = 'tc-login-link';
+      linksBox.appendChild(login);
+
+      const account = document.createElement('a');
+      account.href = '/account';
+      account.textContent = 'Account';
+      account.className = 'tc-account-link';
+      linksBox.appendChild(account);
+
+      const logout = document.createElement('a');
+      logout.href = '#';
+      logout.textContent = 'Log out';
+      logout.className = 'tc-logout-btn';
+      linksBox.appendChild(logout);   
+     }
+    
+    // Always (re)bind controls safely
+    const btn   = qs('.tc-mnav-btn', header);
+    const close = qs('.tc-mnav-close', drawer);
+
+    function open(){
+      overlay.classList.add('is-open');
+      drawer.classList.add('is-open');
+      document.documentElement.style.overflow = 'hidden';
+    }
+    function shut(){
+      overlay.classList.remove('is-open');
+      drawer.classList.remove('is-open');
+      document.documentElement.style.overflow = '';
+    }
+
+    if (btn && !btn.__tcBound){
+      btn.__tcBound = true;
+      btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); open(); });
+    }
+    if (!overlay.__tcBound){
+      overlay.__tcBound = true;
+      overlay.addEventListener('click', shut);
+    }
+    if (close && !close.__tcBound){
+      close.__tcBound = true;
+      close.addEventListener('click', shut);
+    }
+
+    if (!document.__tcMnavEsc){
+      document.__tcMnavEsc = true;
+      document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') shut(); });
+    }
+    
+        // ---- Set html.tc-logged-in based on Supabase session ----
+    async function setAuthClass(){
+      try{
+        const sb = window.sb;
+        if (!sb?.auth?.getSession) return;
+        const { data } = await sb.auth.getSession();
+        document.documentElement.classList.toggle('tc-logged-in', !!data?.session);
+      }catch(e){}
+    }
+    setAuthClass();
+    try{
+      window.sb?.auth?.onAuthStateChange && window.sb.auth.onAuthStateChange(setAuthClass);
+    }catch(e){}
+
+    // ---- Logout handler (works for drawer + anywhere using .tc-logout-btn) ----
+        if (!document.__tcLogoutBound){
+      document.__tcLogoutBound = true;
+      document.addEventListener('click', async (e)=>{
+        const a = e.target?.closest?.('.tc-logout-btn');
+        if (!a) return;
+        e.preventDefault();
+        try{ await window.sb?.auth?.signOut(); }catch(err){}
+        setTimeout(()=>location.reload(), 60);
+      }, true);
+    }
+
+    return true;
+  }
+
+  // Try a few times in case header loads late
+  let tries = 0;
+  const t = setInterval(()=>{
+    tries++;
+    if (init() || tries > 40) clearInterval(t);
+  }, 150);
+})();

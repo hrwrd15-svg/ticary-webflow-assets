@@ -8005,3 +8005,43 @@ body.tc-filter-panel-open{
   max-width:none !important;
 }
 
+#tcdm-dealerName{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.tcdm-likeInline{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.12);
+  font-size:12px;
+  font-weight:900;
+  color:var(--tc-text);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+:root[data-theme="light"] .tcdm-likeInline{
+  background:rgba(15,23,42,.05);
+  border-color:rgba(15,23,42,.12);
+}
+.tcdm-likeInline svg{ width:14px; height:14px; }
+
+#tcdm-dealerBlock .tcdm-saveDealerBtn.is-on{
+  background:linear-gradient(135deg,#22c55e 0%, #16a34a 100%) !important;
+  border-color:rgba(34,197,94,.95) !important;
+  color:#fff !important;
+  box-shadow:0 10px 22px rgba(34,197,94,.20) !important;
+}
+#tcdm-dealerBlock .tcdm-saveDealerBtn.is-disabled{
+  opacity:.55 !important;
+  cursor:not-allowed !important;
+}
+#tcdm-dealerBlock .tcdm-saveDealerBtn.is-loading{
+  opacity:.85;
+  cursor:progress;
+}

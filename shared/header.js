@@ -654,6 +654,8 @@
       logout.textContent = 'Log out';
       logout.className = 'tc-logout-btn';
       linksBox.appendChild(logout);
+
+    } // <-- CLOSE if (!drawer) here   
     
     // Always (re)bind controls safely
     const btn   = qs('.tc-mnav-btn', header);

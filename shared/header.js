@@ -614,7 +614,7 @@
     const links = Array.from(nav.querySelectorAll('.tc-nav-link'));
     if (!links.length) return false;
 
-    // Don't double-inject
+    // Don’t double-inject
     if (header.querySelector('.tc-mega-wrap')) return true;
 
     // Build wrap + panel
@@ -948,33 +948,4 @@
     mo.observe(listRoot, { childList:true, subtree:true });
   }
 
-})();
-
-// ===== NEW: CONSISTENT HEADER NAVIGATION (V1) =====
-(function(){
-  if (window.__tcConsistentHeaderNavV1) return;
-  window.__tcConsistentHeaderNavV1 = 1;
-
-  function onReady(fn) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", fn, { once: true });
-    } else fn();
-  }
-
-  onReady(function(){
-    const header = document.getElementById('tc-header');
-    if (!header) return;
-
-    // Hide desktop nav (.tc-header-nav) on ALL devices
-    const desktopNav = header.querySelector('.tc-header-nav');
-    if (desktopNav) {
-      desktopNav.style.display = 'none';
-    }
-
-    // Force hamburger menu to always show (not just mobile)
-    const hamburgerBtn = header.querySelector('.tc-mnav-btn');
-    if (hamburgerBtn) {
-      hamburgerBtn.style.display = 'inline-flex';
-    }
-  });
 })();

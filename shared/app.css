@@ -7416,5 +7416,238 @@ body.tc-filter-panel-open{
   box-shadow:0 8px 18px rgba(0,0,0,.22);
 }
 
+/* =========================================================
+   TCDM POPUP AID — CLEAN (DETAILS TIGHT + MAP FIXED)
+   - DETAILS mode: modal shrink-wraps (no ugly long right column)
+   - Pane scrolls internally when content is long
+   - MAP mode: keeps your fixed-height behaviour
+   - Keeps nested scroll “handoff” behaviour
+========================================================= */
+
+/* -----------------------------
+   A) DETAILS MODE (DEFAULT)
+-------------------------------- */
+
+/* IMPORTANT: let modal shrink-wrap in DETAILS mode */
+#tcdm:not(.is-map-open){
+  height:auto !important;                      /* overrides any fixed height */
+  max-height:min(92vh, 980px) !important;      /* safety cap */
+}
+
+/* Grid should NOT be forced to 100% height in DETAILS mode */
+#tcdm:not(.is-map-open) #tcdm-scroll{
+  height:auto !important;
+  overflow:hidden !important;                  /* no whole-modal scrolling */
+  overscroll-behavior:none !important;
+
+  display:grid !important;
+  grid-template-columns:minmax(520px, 1.35fr) minmax(380px, .85fr) !important;
+  grid-template-rows:auto !important;
+  grid-auto-rows:unset !important;
+  align-items:start !important;                /* stop stretch-by-default vibes */
+}
+
+/* Left should just be content height */
+#tcdm:not(.is-map-open) #tcdm-left{
+  overflow:visible !important;
+  min-height:0 !important;
+}
+
+/* Right rail becomes content-tight (NOT height:100%) */
+#tcdm:not(.is-map-open) #tcdm-right{
+  display:flex !important;
+  flex-direction:column !important;
+  height:auto !important;                      /* key */
+  min-height:0 !important;
+  overflow:hidden !important;
+
+  padding:16px !important;
+  gap:12px !important;
+
+  background:var(--tc-surface) !important;
+  border-left:1px solid var(--tc-border) !important;
+  align-self:start !important;                 /* key */
+}
+
+/* CTA bar becomes a card (not sticky in details mode) */
+#tcdm:not(.is-map-open) #tcdm-ctaBar{
+  position:relative !important;
+  top:auto !important;
+
+  padding:14px !important;
+  border-radius:16px !important;
+  border:1px solid var(--tc-border) !important;
+  background:var(--tc-surface) !important;
+  box-shadow:0 12px 30px rgba(0,0,0,.08) !important;
+}
+
+/* Pane is the ONLY scroller when content is long */
+#tcdm:not(.is-map-open) #tcdm-paneContainer{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+
+  /* cap based on viewport so it never makes the UI look “long” */
+  max-height:clamp(260px, 44vh, 520px) !important;
+
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  -webkit-overflow-scrolling:touch !important;
+  overscroll-behavior:contain !important;
+
+  padding:14px !important;
+  border-radius:16px !important;
+  border:1px solid var(--tc-border) !important;
+  background:var(--tc-surface) !important;
+  box-shadow:0 12px 30px rgba(0,0,0,.06) !important;
+}
+
+/* panes */
+#tcdm:not(.is-map-open) .tcdm-pane{ display:none !important; }
+#tcdm:not(.is-map-open) .tcdm-pane.is-on{ display:block !important; }
+
+/* inner feature/comment boxes still scroll, but can “handoff” */
+#tcdm:not(.is-map-open) .tcdm-scroll{
+  max-height:260px !important;
+  overflow:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  overscroll-behavior:auto !important;
+  overscroll-behavior-y:auto !important;
+}
+
+/* -----------------------------
+   B) MAP SECTION VISIBILITY
+-------------------------------- */
+#tcdm-mapSection:not(.is-open){
+  display:none !important;
+}
+
+/* -----------------------------
+   C) MAP MODE (KEEP YOUR FIXED HEIGHT)
+-------------------------------- */
+
+/* In map mode keep the modal tall like before */
+#tcdm.is-map-open{
+  height:min(86vh, 860px) !important;
+  max-height:860px !important;
+}
+
+#tcdm.is-map-open #tcdm-scroll{
+  height:100% !important;
+  overflow:hidden !important;
+
+  display:grid !important;
+  grid-template-columns:minmax(520px, 1.35fr) minmax(380px, .85fr) !important;
+  grid-template-rows:auto 1fr !important;
+  grid-auto-rows:unset !important;
+}
+
+#tcdm.is-map-open #tcdm-left{ grid-row:1 !important; }
+#tcdm.is-map-open #tcdm-right{ grid-row:1 !important; }
+
+/* map fills */
+#tcdm.is-map-open #tcdm-mapSection{
+  display:block !important;
+  grid-row:2 !important;
+  grid-column:1 / -1 !important;
+
+  margin:12px 16px 16px !important;
+  height:auto !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+#tcdm.is-map-open #tcdm-mapCanvas{
+  height:100% !important;
+  min-height:420px !important;
+}
+@media (max-width: 768px){
+  #tcdm.is-map-open #tcdm-mapCanvas{ min-height:300px !important; }
+}
+
+/* hide hero in map mode */
+#tcdm.is-map-open #tcdm-hero,
+#tcdm.is-map-open #tcdm-thumbs,
+#tcdm.is-map-open #tcdm-imgWrap{
+  display:none !important;
+}
+#tcdm.is-map-open #tcdm-left{ padding-bottom:0 !important; }
+#tcdm.is-map-open #tcdm-meta{ margin-bottom:0 !important; }
+
+/* hide detail cards in map mode */
+#tcdm.is-map-open #tcdm-ctaBar,
+#tcdm.is-map-open #tcdm-paneContainer{
+  display:none !important;
+}
+
+/* right becomes simple in map mode */
+#tcdm.is-map-open #tcdm-right{
+  padding:18px 18px 0 !important;
+  gap:0 !important;
+}
+
+/* back button styling */
+#tcdm.is-map-open #tcdm-right{
+  border-radius:18px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:flex-end !important;
+  border-bottom-left-radius:18px !important;
+  border-bottom-right-radius:18px !important;
+}
+#tcdm.is-map-open .tcdm-mapBackWrap{
+  margin-top:auto !important;
+  padding:14px 0 0 0 !important;
+}
+#tcdm.is-map-open #tcdm-mapBackBtn{ width:100% !important; }
+
+/* chips force */
+#tcdm-reg, #tcdm-euro,
+#tcdm-reg *, #tcdm-euro *{
+  opacity:1 !important;
+  color:inherit !important;
+}
+:root:not([data-theme="light"]) #tcdm-reg,
+:root:not([data-theme="light"]) #tcdm-euro{ color:#ffffff !important; }
+:root[data-theme="light"] #tcdm-reg,
+:root[data-theme="light"] #tcdm-euro{ color:#11161b !important; }
+
+/* dealer contact line styling */
+.tcdm-dealerContact{
+  margin-top:6px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  font-size:13px;
+  font-weight:600;
+}
+.tcdm-contactItem{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  opacity:.85;
+}
+.tcdm-contactItem svg{
+  width:16px;
+  height:16px;
+  color:#3fb1ce;
+}
+
+/* DETAILS MODE: lock modal + right rail heights to left column */
+#tcdm:not(.is-map-open){
+  height: var(--tcdm-lock-h, auto) !important;
+  max-height: min(92vh, 980px) !important;
+}
+
+#tcdm:not(.is-map-open) #tcdm-right{
+  max-height: var(--tcdm-lock-h, none) !important;
+}
+
+/* Pane becomes the scroller (we’ll set its max-height via CSS variable too) */
+#tcdm:not(.is-map-open) #tcdm-paneContainer{
+  max-height: var(--tcdm-pane-max, clamp(260px, 44vh, 520px)) !important;
+  overflow-y: auto !important;
+}
+
 
 

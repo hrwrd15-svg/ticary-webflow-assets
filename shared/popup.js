@@ -1531,3 +1531,181 @@ console.log("✅ popup.js loaded (GitHub)");
 
   console.log('✅ popup-map-aid.js loaded (GitHub)');
 })();
+
+/* =========================================================
+   TICARY — TCDM Modal Stack Back (v3) — bundle-safe
+   Adds: restores prior popup's MAP OPEN state when going back.
+========================================================= */
+(function(){
+  if (window.__tcModalStackBack_v3) return;
+  window.__tcModalStackBack_v3 = 1;
+
+  const stack = (window.__tcModalStack = window.__tcModalStack || []);
+
+  const num = (v) => {
+    const n = Number(String(v ?? '').trim());
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  function whenReady(cb, tries=0){
+    // We need modal DOM (close button) + tcOpenDetailsModal eventually
+    const overlay = document.getElementById('tcdm-overlay');
+    const closeBtn = document.getElementById('tcdm-close');
+    if (overlay && closeBtn) return cb();
+
+    if (tries >= 200) return; // ~10s
+    setTimeout(() => whenReady(cb, tries+1), 50);
+  }
+
+  function getCurrentId(){
+    return num(window.__tcdmCurrentVehicleId || 0);
+  }
+
+  function isMapOpenNow(){
+    const ms = document.getElementById('tcdm-mapSection');
+    return !!(ms && ms.classList.contains('is-open'));
+  }
+
+  function pushCurrentIfNeeded(nextId){
+    const curId = getCurrentId();
+    nextId = num(nextId);
+    if (!curId || !nextId || curId === nextId) return;
+
+    const top = stack[stack.length - 1];
+    const topId = (top && typeof top === 'object') ? num(top.id) : num(top);
+
+    if (topId !== curId){
+      stack.push({ id: curId, mapOpen: isMapOpenNow() });
+    }
+  }
+
+  function openId(id){
+    id = num(id);
+    if (!id) return false;
+    window.__tcdmCurrentVehicleId = id;
+
+    if (typeof window.tcOpenDetailsModal === 'function'){
+      try{ window.tcOpenDetailsModal({ vehicle_id: id }); return true; }catch(_){}
+    }
+    return false;
+  }
+
+  function restoreMapIfNeeded(){
+    // after openId(prev), wait until modal is open then re-open map section
+    let tries = 0;
+    const iv = setInterval(() => {
+      tries++;
+
+      const overlay = document.getElementById('tcdm-overlay');
+      if (!overlay || !overlay.classList.contains('is-open')){
+        if (tries > 60) clearInterval(iv);
+        return;
+      }
+
+      const mapSection = document.getElementById('tcdm-mapSection');
+      const mapToggle  = document.getElementById('tcdm-mapToggle');
+
+      if (mapSection && mapSection.classList.contains('is-open')){
+        clearInterval(iv);
+        return; // already open
+      }
+
+      if (mapToggle){
+        mapToggle.click(); // opens map (runs main popup logic)
+        clearInterval(iv);
+        return;
+      }
+
+      if (tries > 60) clearInterval(iv);
+    }, 80);
+  }
+
+  function wrapTcOpen(){
+    const fn = window.tcOpenDetailsModal;
+    if (typeof fn !== 'function' || fn.__tcWrapped_v3) return;
+
+    function wrapped(opts){
+      opts = opts || {};
+      const nextId = num(opts.vehicle_id || opts.id || 0);
+      if (nextId){
+        pushCurrentIfNeeded(nextId);
+        window.__tcdmCurrentVehicleId = nextId;
+      }
+      return fn.call(this, opts);
+    }
+    wrapped.__tcWrapped_v3 = 1;
+    window.tcOpenDetailsModal = wrapped;
+  }
+
+  whenReady(() => {
+    // 1) WRAP tcOpenDetailsModal so currentId ALWAYS updates and stack ALWAYS pushes
+    wrapTcOpen();
+    let tries = 0;
+    const iv = setInterval(() => {
+      wrapTcOpen();
+      tries++;
+      if (tries > 40 || (window.tcOpenDetailsModal && window.tcOpenDetailsModal.__tcWrapped_v3)) clearInterval(iv);
+    }, 100);
+
+    // 2) When opening Car B from map popup button, push Car A (+mapOpen) then set current to B
+    document.addEventListener('click', function(e){
+      const btn = e.target && e.target.closest ? e.target.closest('[data-tcdm-open]') : null;
+      if (!btn) return;
+
+      const nextId = num(btn.getAttribute('data-tcdm-open'));
+      if (!nextId) return;
+
+      pushCurrentIfNeeded(nextId);
+      window.__tcdmCurrentVehicleId = nextId;
+    }, true);
+
+    // 3) When opening from a card click, set current
+    document.addEventListener('click', function(e){
+      const t = e.target;
+      if (!t || !t.closest) return;
+
+      const card = t.closest('.as-card');
+      if (!card) return;
+
+      const id =
+        num(card.dataset?.vehicleId) ||
+        num(card.getAttribute('data-vehicle-id')) ||
+        num(card.getAttribute('data-vehicleid'));
+
+      if (!id) return;
+
+      const hitImg = t.closest('img, .as-thumb, .as-thumb-wrap, .as-image, .as-img');
+      const hitView =
+        t.closest('.as-view, .as-viewdetails, [data-view-details], [data-action="view-details"]') ||
+        (t.closest('button, a') && /view details|details|view/i.test((t.closest('button, a')?.textContent || '').trim()));
+
+      if (!hitImg && !hitView) return;
+
+      window.__tcdmCurrentVehicleId = id;
+    }, true);
+
+    // 4) BACK on close: if stack has prev, go back (and restore map state if needed)
+    document.addEventListener('click', function(e){
+      const closeBtn = e.target && e.target.closest ? e.target.closest('#tcdm-close') : null;
+      if (!closeBtn) return;
+
+      const prev = stack.pop();
+      const prevId = (prev && typeof prev === 'object') ? num(prev.id) : num(prev);
+
+      if (!prevId) return; // no previous -> allow normal close
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+      openId(prevId);
+
+      // restore map open state
+      const wantsMap = !!(prev && typeof prev === 'object' && prev.mapOpen);
+      if (wantsMap) restoreMapIfNeeded();
+    }, true);
+
+    console.log('[ticary] modal stack back loaded (v3)');
+  });
+
+})();

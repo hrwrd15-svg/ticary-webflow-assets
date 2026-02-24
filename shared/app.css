@@ -6544,4 +6544,131 @@ input[type="range"]::-moz-range-thumb {
   color: #000 !important; /* <-- ADD THIS */
 }
 
+/* TICARY – Desktop filters: add inner side padding so Windows scrollbar doesn't cover content */
+@media (min-width: 901px){
+  #as-filters{
+    box-sizing: border-box !important;
+    padding-left: 0px !important;
+    padding-right: 0px !important; /* extra room for always-visible Windows scrollbar */
+    scrollbar-gutter: stable;        /* supported browsers reserve scrollbar space */
+  }
+}
+
+/* =========================================================
+   TICARY – Remove background glow from the main grid wrapper
+========================================================= */
+
+@media (min-width: 901px){
+
+  /* Kill glow on the overall grid/wrapper if it's coming from there */
+  .as-grid,
+  #as-grid,
+  .ds-grid,
+  #vehicles-list-wrapper{
+    background: transparent !important;
+    box-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .as-grid::before,
+  .as-grid::after,
+  #as-grid::before,
+  #as-grid::after,
+  .ds-grid::before,
+  .ds-grid::after,
+  #vehicles-list-wrapper::before,
+  #vehicles-list-wrapper::after{
+    content: none !important;
+    display: none !important;
+  }
+
+  /* Keep the faint divider on the filters column */
+  #as-filters{
+    border-right: 1px solid rgba(255,255,255,.06) !important;
+  }
+  :root[data-theme="light"] #as-filters{
+    border-right: 1px solid rgba(15,23,42,.08) !important;
+  }
+
+}
+
+/* =========================================================
+   TICARY – Sort dropdown options should NOT be pin-blue (Windows)
+   Make options list neutral like filter selects
+========================================================= */
+
+/* New sort select (current UI) */
+#as-sort-new option{
+  background: #ffffff !important;
+  color: #0A0E12 !important;
+}
+
+/* Old/back-compat sort select */
+#as-sort option{
+  background: #ffffff !important;
+  color: #0A0E12 !important;
+}
+
+/* If you ever use optgroups */
+#as-sort-new optgroup,
+#as-sort optgroup{
+  background: #ffffff !important;
+  color: #0A0E12 !important;
+}
+
+/* Nice: keep hover/selected readable on Windows */
+#as-sort-new option:checked,
+#as-sort option:checked{
+  background: #e9eef5 !important;  /* subtle grey-blue */
+  color: #0A0E12 !important;
+}
+
+/* =========================================================
+   TICARY – Sort dropdown list should match filter selects
+   Fix Windows option menu colours + hover state
+========================================================= */
+
+/* -------- DARK THEME (match .asf selects) -------- */
+:root:not([data-theme="light"]) #as-sort-new option,
+:root:not([data-theme="light"]) #as-sort option,
+:root:not([data-theme="light"]) #as-sort-new optgroup,
+:root:not([data-theme="light"]) #as-sort optgroup{
+  background-color: #0f1418 !important;  /* same as filter selects */
+  color: #e8f0f5 !important;
+}
+
+/* Hover/selected (prevents Ticary-blue highlight on Windows) */
+:root:not([data-theme="light"]) #as-sort-new option:hover,
+:root:not([data-theme="light"]) #as-sort option:hover,
+:root:not([data-theme="light"]) #as-sort-new option:checked,
+:root:not([data-theme="light"]) #as-sort option:checked{
+  background-color: #1c2730 !important;  /* same as filter hover */
+  color: #ffffff !important;
+}
+
+
+/* -------- LIGHT THEME (match light filter selects) -------- */
+:root[data-theme="light"] #as-sort-new option,
+:root[data-theme="light"] #as-sort option,
+:root[data-theme="light"] #as-sort-new optgroup,
+:root[data-theme="light"] #as-sort optgroup{
+  background-color: #ffffff !important;
+  color: #11161b !important;
+}
+
+:root[data-theme="light"] #as-sort-new option:hover,
+:root[data-theme="light"] #as-sort option:hover,
+:root[data-theme="light"] #as-sort-new option:checked,
+:root[data-theme="light"] #as-sort option:checked{
+  background-color: #eef2f6 !important;  /* same vibe as light UI */
+  color: #11161b !important;
+}
+
+/* Safety: even if JS misses, stop background scroll while panel is open */
+body.tc-filter-panel-open{
+  overflow: hidden !important;
+  touch-action: none;
+}
+
 

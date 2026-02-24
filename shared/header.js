@@ -586,3 +586,127 @@
     })();
   });
 })();
+
+/* =========================================================
+   TICARY – Search page: Inject + wire mega panels (V2)
+   - waits for header/nav
+   - supports .tc-header-nav .tc-nav-link
+========================================================= */
+(function(){
+  if (window.__tcHeaderMegaV2) return;
+  window.__tcHeaderMegaV2 = true;
+
+  function init(){
+    const header = document.getElementById('tc-header');
+    if (!header) return false;
+
+    // Mobile: do not inject mega panels at all
+    if (window.matchMedia && window.matchMedia('(max-width: 899px)').matches){
+      header.classList.remove('tc-mega-open');
+      const existing = header.querySelector('.tc-mega-wrap');
+      if (existing) existing.remove();
+      return true;
+    }
+
+    const nav = header.querySelector('.tc-header-nav');
+    if (!nav) return false;
+
+    const links = Array.from(nav.querySelectorAll('.tc-nav-link'));
+    if (!links.length) return false;
+
+    // Don’t double-inject
+    if (header.querySelector('.tc-mega-wrap')) return true;
+
+    // Build wrap + panel
+    const wrap = document.createElement('div');
+    wrap.className = 'tc-mega-wrap';
+    wrap.innerHTML = `
+      <div class="tc-mega-panel" role="dialog" aria-label="Header menu">
+        <div class="tc-mega-grid">
+          <div class="tc-mega-col">
+            <div class="tc-mega-title" data-col-title></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <a class="tc-mega-viewall" href="#" data-viewall>View all</a>
+          </div>
+          <div class="tc-mega-col">
+            <div class="tc-mega-title">FAQ</div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+          </div>
+          <div class="tc-mega-col">
+            <div class="tc-mega-title">Best picks</div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+            <div class="tc-mega-line"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    header.appendChild(wrap);
+
+    const panel   = wrap.querySelector('.tc-mega-panel');
+    const titleEl = wrap.querySelector('[data-col-title]');
+    const viewAll = wrap.querySelector('[data-viewall]');
+
+    let closeT = null;
+
+    function open(name){
+      header.classList.add('tc-mega-open');
+      if (titleEl) titleEl.textContent = name || '';
+      if (viewAll){
+        viewAll.textContent = 'View all ' + String(name || '').toLowerCase();
+        viewAll.setAttribute('href', '#');
+      }
+    }
+    function close(){
+      header.classList.remove('tc-mega-open');
+    }
+    function scheduleClose(){
+      clearTimeout(closeT);
+      closeT = setTimeout(close, 120);
+    }
+    function cancelClose(){
+      clearTimeout(closeT);
+    }
+
+    links.forEach(a => {
+      const name = (a.textContent || '').trim();
+      a.addEventListener('mouseenter', () => { cancelClose(); open(name); });
+      a.addEventListener('mouseleave', scheduleClose);
+      a.addEventListener('focus', () => open(name));
+      a.addEventListener('blur', scheduleClose);
+    });
+
+    panel.addEventListener('mouseenter', cancelClose);
+    panel.addEventListener('mouseleave', scheduleClose);
+
+    document.addEventListener('pointerdown', (e) => {
+      if (!header.classList.contains('tc-mega-open')) return;
+      if (!header.contains(e.target)) close();
+    });
+
+    return true;
+  }
+
+  function boot(){
+    if (init()) return;
+
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if (init() || tries > 60) clearInterval(t); // ~6s max
+    }, 100);
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot, { once:true });
+  } else {
+    boot();
+  }
+})();

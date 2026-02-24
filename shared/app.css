@@ -4775,3 +4775,1350 @@ input[type="range"]::-moz-range-thumb {
   transform: translate3d(0,0,0) rotate(10deg) scale(1.15);
   filter: drop-shadow(0 0 8px rgba(236,72,153,.95));
 }
+
+/* Pin-blue variant that matches your map pins */
+.asf .btn.pin{
+  background:#3FB1CE !important;   /* pin colour */
+  color:#ffffff !important;
+  border:1px solid rgba(0,0,0,.12) !important;
+  box-shadow:0 6px 18px rgba(63,177,206,.35);
+  font-weight:800;
+}
+
+ /* Keep filter buttons on one line (with comfy compact sizing) */
+  .asf .btnbar{
+    display:flex;
+    flex-wrap:nowrap;      
+    gap:6px;               
+  }
+  .asf .btnbar .btn{
+    height:36px;          
+    padding:0 10px;        
+    border-radius:10px;    
+    font-size:.95rem;      
+    white-space:nowrap;    
+    flex:0 1 auto;         
+  }
+  /* pin-blue button matches the compact sizing too */
+  .asf .btnbar .btn.pin{
+    height:36px;
+    padding:0 10px;
+    border-radius:10px;
+    font-weight:800;
+  }
+
+  /* Fallback for very narrow screens: allow wrapping again */
+  @media (max-width: 420px){
+    .asf .btnbar{ flex-wrap:wrap; }
+  }
+
+/* 1) Ensure popup corners clip the image */
+  #as-map .mapboxgl-popup-content,
+  .mapboxgl-popup-content{
+    border-radius:14px !important;
+    overflow:hidden !important;               
+    /* extra safety on some browsers */
+    clip-path: inset(0 round 14px);
+  }
+  .as-pop-thumb{
+    border-top-left-radius:14px;                
+    border-top-right-radius:14px;
+    overflow:hidden;
+  }
+
+  /* 2) Larger, easier carousel arrows on the image */
+  .as-pop-nav{
+    position:absolute; top:50%; left:0; right:0;
+    display:flex; justify-content:space-between;
+    transform:translateY(-50%);
+    pointer-events:none;
+    padding:0 6px;                               
+  }
+  .as-pop-btn{
+    pointer-events:auto;
+    width:32px; height:32px;                     /* bigger target */
+    display:flex; align-items:center; justify-content:center;
+    border-radius:999px;
+    font-size:18px; line-height:1; font-weight:800;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.35);
+    color:#fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.35);
+    user-select:none;
+  }
+  .as-pop-btn:hover{ filter:brightness(1.08); }
+
+  /* 3) Bigger, clearer close (X) button */
+  .mapboxgl-popup-close-button{
+    width:36px; height:36px;                     
+    padding:8px 10px;                            
+    font-size:20px; line-height:1;
+    color:#e8f0f5;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:12px;
+    right:6px; top:6px;                          /* nudge in from the edge */
+  }
+  .mapboxgl-popup-close-button:hover{ filter:brightness(1.08); }
+  
+ /* Distance: 'Use my location' button – match input styling */
+#asf-use-loc{
+  appearance:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:42px;                  /* match input height */
+  padding:0 12px;
+  border-radius:12px;           /* match input radius */
+  background:#0f1418;           /* same dark navy as inputs */
+  border:1px solid rgba(255,255,255,.15); /* pale border */
+  color:#e8f0f5;                /* same text as inputs */
+  font-weight:600;
+  line-height:1;
+  cursor:pointer;
+  transition:background .2s ease, border-color .2s ease, transform .1s ease;
+}
+#asf-use-loc:hover{
+  background:#111920;           /* subtle lift */
+  border-color:rgba(255,255,255,.22);
+}
+#asf-use-loc:active{
+  transform:translateY(.5px);
+}
+
+/* Vehicle dropdown: 2-up filter grid alignment fix */
+.asf .grid-2{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:10px;                 /* controls spacing */
+}
+
+.asf .grid-2 > .row{
+  margin:0 !important;      /* kill global sibling margin inside grid */
+}
+
+/* tidy label + input stack so heights match */
+.asf .grid-2 > .row > label{
+  display:block;
+  margin:0 0 6px;
+  line-height:1.2;
+}
+
+.asf .grid-2 > .row select,
+.asf .grid-2 > .row input{
+  width:100%;
+}
+
+/* Increase vertical space between rows in the 2-up grid */
+.asf .grid-2{
+  column-gap: 10px;  /* same left/right spacing */
+  row-gap: 22px;     /* was 10px – now roomier */
+}
+
+/* Optional: tiny extra breathing room under labels */
+.asf .grid-2 > .row > label{
+  margin-bottom: 8px; /* was 6px */
+}
+
+/* Slightly more on large screens */
+@media (min-width: 980px){
+  .asf .grid-2{ row-gap: 18px; }
+}
+
+/* 1) Ensure nicer row spacing *inside* any 2-up grid (force if earlier 'gap' wins) */
+.asf #asf-vehicle .grid-2{
+  column-gap:10px;
+  row-gap:16px !important;  /* bump internal row spacing */
+}
+
+/* 2) Add space *between* the first specs grid and the second specs grid */
+.asf #asf-vehicle .grid-2 + .row{
+  margin-top:14px !important;  /* space before the second grid wrapper */
+}
+
+/* Keep grid children flush (so the grid gap controls spacing) */
+.asf #asf-vehicle .grid-2 > .row{ margin:0 !important; }
+
+/* Three-slot control bar: Hide (left) • Clear (middle) • Apply (right) */
+.asf .btnrow{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.asf .btnrow .left   { justify-self: start; }
+.asf .btnrow .center { justify-self: center; }
+.asf .btnrow .right  { justify-self: end; }
+
+/* Make buttons consistent height */
+.asf .btnrow .btn{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Visual treatments (reuses your theme) */
+.asf .btn.pin{
+  background: var(--pin, #3FB1CE);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,.3);
+}
+.asf .btn.ghost{
+  background: #0f1418;
+  color: #e8f0f5;
+  border: 1px solid rgba(255,255,255,.15);
+}
+.asf .btn.ghost:hover{ background: #111920; border-color: rgba(255,255,255,.22); }
+
+/* Top & bottom filter button rows: Clear (left) + Apply (right) */
+.asf .asf-controls-row{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap:10px;
+  margin:12px 0;
+}
+
+/* Buttons look consistent */
+.asf .asf-controls-row .btn{
+  height:42px;
+  padding:0 16px;
+  border-radius:12px;
+  font-weight:700;
+  line-height:1;
+}
+
+/* Secondary (Clear) using your dark style */
+.asf .btn.ghost{
+  background:#0f1418;
+  color:#e8f0f5;
+  border:1px solid rgba(255,255,255,.15);
+}
+.asf .btn.ghost:hover{
+  background:#111920;
+  border-color:rgba(255,255,255,.22);
+}
+
+/* Primary (Apply) using your pin blue */
+.asf .btn.pin{
+  background:var(--pin,#3FB1CE);
+  color:#fff;
+  border:1px solid rgba(0,0,0,.35);
+}
+.asf .btn.pin:hover{ filter:brightness(1.05); }
+.asf .btn.pin:active{ transform:translateY(0.5px); }
+
+.asf .asf-controls-row{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap:10px;
+  margin:12px 0;
+}
+
+.asf .asf-controls-row .btn{
+  height:42px;
+  padding:0 16px;
+  border-radius:12px;
+  font-weight:700;
+  line-height:1;
+}
+
+.asf .btn.ghost{
+  background:#0f1418;
+  color:#e8f0f5;
+  border:1px solid rgba(255,255,255,.15);
+}
+.asf .btn.ghost:hover{
+  background:#111920;
+  border-color:rgba(255,255,255,.22);
+}
+
+.asf .btn.pin{
+  background:var(--pin,#3FB1CE);
+  color:#fff;
+  border:1px solid rgba(0,0,0,.35);
+}
+.asf .btn.pin:hover{ filter:brightness(1.05); }
+.asf .btn.pin:active{ transform:translateY(0.5px); }
+
+/* Monthly price label – make it stand out a bit more */
+.asf .asf-monthly-label{
+  margin: 14px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  opacity: .85;
+}
+
+/* Vehicle card appear animation */
+.as-card{
+  transition: transform 0.18s ease-out, opacity 0.18s ease-out;
+}
+
+.as-card.as-appear{
+  animation: as-card-in 0.18s ease-out;
+}
+
+@keyframes as-card-in{
+  from{
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Toolbar: Hide map / Hide filters buttons — extra clear & chunky */
+#as-filters-toggle-new,
+#as-map-toggle-new{
+  appearance:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+
+  padding:0 20px;
+  height:48px;                         /* bigger, easier hit area */
+  border-radius:10px;
+
+  background:#0f1418;
+  border:1px solid var(--pin,#3FB1CE);
+  color:#e8f0f5;
+
+  font-size:16px;                      /* larger label */
+  font-weight:700;
+  letter-spacing:.02em;
+
+  cursor:pointer;
+
+  box-shadow:
+    0 0 0 1px rgba(63,177,206,0.35),
+    0 0 12px rgba(63,177,206,0.45);
+
+  transition:
+    background .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease,
+    transform .12s ease;
+}
+
+#as-filters-toggle-new:hover,
+#as-map-toggle-new:hover{
+  background:#111920;
+  border-color:rgba(63,177,206,0.95);
+  box-shadow:
+    0 0 0 1px rgba(63,177,206,0.75),
+    0 0 16px rgba(63,177,206,0.8);
+}
+
+#as-filters-toggle-new:active,
+#as-map-toggle-new:active{
+  transform:translateY(.5px);
+  box-shadow:
+    0 0 0 1px rgba(63,177,206,0.75),
+    0 0 10px rgba(63,177,206,0.6);
+}
+
+
+  /* Distance slider row with +/- buttons */
+    .asf-distance-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .asf-distance-row .as-range{
+    flex:1 1 auto;
+    min-width:0;
+  }
+
+  .asf .asf-dist-step{
+    flex:0 0 auto;
+    width:32px;
+    height:32px;
+    padding:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:700;
+    background:rgba(0,0,0,0.45);
+    border:1px solid rgba(255,255,255,0.26);
+    color:#e8f0f5;
+    box-shadow:0 3px 10px rgba(0,0,0,0.45);
+  }
+  /* Distance "Go" button – match other pill buttons */
+.asf-distance-help {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.asf-distance-go {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: 999px !important; /* force pill shape */
+}
+
+
+  
+    /* Distance slider – make the bar visible in light theme */
+  :root[data-theme="light"] #asf-distance-range{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    background:transparent;
+    height:24px;
+  }
+
+  :root[data-theme="light"] #asf-distance-range::-webkit-slider-runnable-track{
+    height:4px;
+    border-radius:999px;
+    background:#dde2e8;              /* light grey bar */
+  }
+
+  :root[data-theme="light"] #asf-distance-range::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#3FB1CE;              /* Ticary blue knob */
+    border:2px solid #ffffff;
+    margin-top:-6px;                 /* centre on the track */
+    cursor:pointer;
+  }
+  /* Firefox */
+  :root[data-theme="light"] #asf-distance-range::-moz-range-track{
+    height:4px;
+    border-radius:999px;
+    background:#dde2e8;
+  }
+
+  :root[data-theme="light"] #asf-distance-range::-moz-range-thumb{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#3FB1CE;
+    border:2px solid #ffffff;
+    cursor:pointer;
+  }
+
+  .asf .asf-dist-step:hover{
+    filter:brightness(1.08);
+  }
+
+/* Force readable dropdown colours across browsers (esp. Windows) */
+  .asf select option,
+  .asf select optgroup {
+    background-color: #0f1418;   /* dark navy to match the UI */
+    color: #e8f0f5;              /* light text */
+  }
+
+  /* Optional: nicer highlight state */
+  .asf select option:checked,
+  .asf select option:hover {
+    background-color: #1c2730;
+    color: #ffffff;
+  }
+.as-no-results{
+  display:none;
+  margin:18px 0 24px;
+  padding:26px 20px;
+  border-radius:14px;
+  border:1px solid rgba(63,177,206,0.35);
+  background:rgba(10,14,18,0.92);
+  text-align:center;
+  color:#e8f0f5;
+  box-shadow:0 8px 28px rgba(0,0,0,0.45);
+}
+
+.as-no-results h3{
+  margin:0 0 8px;
+  font-size:1.15rem;
+  font-weight:750;
+}
+
+.as-no-results p{
+  margin:2px 0;
+  font-size:0.9rem;
+  opacity:0.9;
+}
+
+.as-no-results-sub{
+  font-size:0.82rem;
+  opacity:0.8;
+}
+
+
+/* STEP 1 – Mobile: stack layout, no sidebar */
+@media (max-width: 768px) {
+  /* Make the main grid a single column instead of sidebar + main */
+  .as-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Filters panel should behave like a normal block, not sticky sidebar */
+  .as-filter {
+    position: static !important;
+    top: auto !important;
+    margin-bottom: 12px;
+  }
+}
+
+/* STEP 4 – Mobile: filters become a full-screen overlay when visible */
+@media (max-width: 768px) {
+  /* When filters are hidden (body has as-no-filters), don't show the block at all */
+  body.as-no-filters #as-filters {
+    display: none !important;
+  }
+
+  /* When filters are visible (no as-no-filters), turn them into a full-screen panel */
+  body:not(.as-no-filters) #as-filters {
+    position: fixed !important;
+    inset: 0;
+    z-index: 999;
+    background: #05070a; /* your dark bg */
+    padding: 12px 14px 18px;
+    overflow-y: auto;
+  }
+
+  /* Prevent the page behind from scrolling while filters are open */
+  body:not(.as-no-filters) {
+    overflow: hidden;
+  }
+
+  /* Make sure the inner filter panel stretches nicely */
+  body:not(.as-no-filters) .as-filter {
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+/* STEP 5 – Mobile: header + scrolling for filters overlay */
+
+/* Hidden by default (desktop & tablet) */
+.asf-mobile-head {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Make sure the overlay itself can scroll */
+  body:not(.as-no-filters) #as-filters {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Show a sticky header inside the overlay when filters are open */
+  body:not(.as-no-filters) .asf-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: #05070a;
+  }
+
+  .asf-mobile-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .asf-mobile-close {
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.2);
+    padding: 6px 14px;
+    background: #11161b;
+    color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+}
+
+/* STEP 6A – Force filters overlay to be scrollable on mobile */
+@media (max-width: 768px) {
+  body:not(.as-no-filters) #as-filters {
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+/* STEP 7 – Mobile: map-only view */
+@media (max-width: 768px) {
+  /* When in map-only mode, hide the car list */
+  body.as-mobile-map-only .w-dyn-list,
+  body.as-mobile-map-only .w-dyn-items,
+  body.as-mobile-map-only [role="list"] {
+    display: none !important;
+  }
+
+  /* Make sure the map block is visible in map-only mode */
+  body.as-mobile-map-only .as-mapwrap {
+    display: block !important;
+  }
+}
+
+/* Mobile – clean up map-only view */
+@media (max-width: 768px) {
+  /* When in map-only mode, hide the "See more cars" button */
+  body.as-mobile-map-only #as-more {
+    display: none !important;
+  }
+
+  /* Give the map more vertical space in map-only view */
+  body.as-mobile-map-only .as-mapwrap {
+    min-height: calc(100vh - 120px); /* tweak this number if needed */
+  }
+}
+
+
+/* Mobile: nicer toolbar layout + full-screen map mode */
+@media (max-width: 768px) {
+  /* --- Toolbar layout on mobile --- */
+  .as-listbar-new {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .as-listbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .as-listbar-right {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Let sort grow, keep buttons compact */
+  #as-sort-new {
+    flex: 1;
+  }
+  #as-filters-toggle-new,
+  #as-map-toggle-new {
+    flex: 0 0 auto;
+  }
+
+  /* --- Map "popup" mode on mobile ---
+     When map is visible (no as-no-map), treat it as a full-screen view */
+  body:not(.as-no-map) {
+    overflow: hidden; /* stop page scrolling behind the map */
+  }
+
+  /* Hide the header so map view feels like its own mode */
+  body:not(.as-no-map) #tc-header {
+    display: none;
+  }
+
+  /* Keep the toolbar fixed at the top as the control strip */
+  body:not(.as-no-map) .as-listbar-new {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: #05070a;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* Make the map fill the rest of the screen under the toolbar */
+  body:not(.as-no-map) .as-mapwrap {
+    position: fixed !important;
+    top: 56px; /* approximate toolbar height; tweak if needed */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 998;
+    background: #05070a;
+  }
+
+  /* Hide the "See more cars" button while in map view */
+  body:not(.as-no-map) #as-more {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile toolbar layout: 
+     Line 1 = results + buttons, Line 2 = sort */
+  .as-listbar-new {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    align-items: flex-start;
+  }
+
+  .as-listbar-left {
+    flex: 1 1 50%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .as-listbar-right {
+    flex: 1 1 50%;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* Sort goes on its own line, full width */
+  #as-sort-new {
+    flex: 1 1 100%;
+  }
+
+  /* Map + Filters share the first line on the right */
+  #as-filters-toggle-new,
+  #as-map-toggle-new {
+    flex: 1 1 calc(50% - 4px);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Map popup mode: make the map fill more of the screen */
+  body:not(.as-no-map) .as-listbar-new {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: #05070a;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  body:not(.as-no-map) .as-mapwrap {
+    position: fixed !important;
+    top: 64px; /* slightly taller toolbar than before */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 998;
+    background: #05070a;
+  }
+
+  /* Keep the header hidden and page from scrolling in map mode */
+  body:not(.as-no-map) #tc-header {
+    display: none;
+  }
+
+  body:not(.as-no-map) {
+    overflow: hidden;
+  }
+
+  /* Hide "See more" in map mode (already mostly there, but reinforce it) */
+  body:not(.as-no-map) #as-more {
+    display: none !important;
+  }
+}
+
+  /* Mobile – force vehicle cards to a single column */
+  @media (max-width: 768px){
+    [data-as-grid="1"]{
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      column-gap: 0 !important;   /* let the card’s own padding handle spacing */
+    }
+  }
+
+  /* Mobile – make vehicle card favourite heart properly chunky */
+  @media (max-width: 768px){
+    .as-card .as-fav-btn{
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+    }
+    .as-card .as-fav-btn svg{
+      width: 28px;
+      height: 28px;
+    }
+  }
+  /* Mobile – make the scroll-to-top button + arrow bigger */
+  @media (max-width: 768px){
+    .backtop{
+      width: 60px !important;
+      height: 60px !important;
+    }
+    .backtop svg{
+      width: 70% !important;
+      height: 70% !important;
+    }
+  }
+
+/* Mobile slide-in filters panel (favourites-style) */
+@media (max-width: 768px) {
+    .tc-filter-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);  /* default for light theme */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 9998;
+  }
+
+  /* In dark theme, make the dim layer stronger so it doesn’t feel see-through */
+  :root:not([data-theme="light"]) .tc-filter-overlay {
+    background: rgba(0,0,0,0.75);
+  }
+
+  .tc-filter-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .tc-filter-panel {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  right: auto;
+  width: 100vw;           /* full screen like favourites */
+  max-width: none;
+  height: 100vh;
+  background: var(--th-bg, #0f1418);
+  color: var(--th-text, #e8f0f5);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;       /* no side shadow, feels like full-screen overlay */
+  transition: left 0.25s ease;
+}
+
+
+  :root[data-theme="light"] .tc-filter-panel {
+    background: #ffffff;
+    color: #11161b;
+  }
+
+  .tc-filter-panel.open {
+    left: 0;
+  }
+
+  .tc-filter-panel-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--th-border, rgba(255,255,255,0.08));
+  }
+
+  .tc-filter-panel-title {
+    font-size:1.1rem;
+    font-weight:700;
+  }
+
+  .tc-filter-panel-close {
+    border:none;
+    background:transparent;
+    color:inherit;
+    font-size:1.4rem;
+    cursor:pointer;
+    padding:4px 8px;
+  }
+
+  .tc-filter-panel-body {
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding: 12px 14px 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* When the slide-in is open, hide the empty filters column */
+  body.tc-filter-panel-open .as-col--filters {
+    display: none !important;
+  }
+  
+    /* Flatten the filters wrapper when shown inside the slide-in panel */
+  .tc-filter-panel .asf-sec {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  /* Make sure the content fills the panel width nicely */
+  .tc-filter-panel .asf {
+    gap: 14px;              /* keep your existing spacing */
+  }
+    /* Make the filters container fill the panel, no floating card */
+  .tc-filter-panel .tc-filter-panel-body {
+    padding: 0;                /* panel itself handles padding */
+  }
+
+  .tc-filter-panel #as-filters,
+  .tc-filter-panel #as-filters-body {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Kill the bordered "card" look only inside the slide-in */
+  .tc-filter-panel .asf-sec {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  /* Give the actual filter content some clean in-panel padding */
+  .tc-filter-panel .asf {
+    padding: 16px 14px 20px;
+    gap: 14px;          /* keep your nice spacing between blocks */
+  }
+}
+
+  /* Panel body: scroll area */
+  .tc-filter-panel .tc-filter-panel-body {
+    padding: 0 !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Make space at the very bottom for iOS URL bar */
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .tc-filter-panel .tc-filter-content {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 16px 14px calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+
+/* TICARY — clamp Edition to 2 lines + ellipsis */
+.as-card .as-edition[fs-list-field="edition"]{
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;   /* 2 lines, then … */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+
+  /* fallback behaviour / keeps long chunks from breaking layout */
+  word-break: break-word !important;
+}
+
+/* Fallback for browsers that ignore line-clamp (rare) */
+@supports not (-webkit-line-clamp: 2){
+  .as-card .as-edition[fs-list-field="edition"]{
+    display: block !important;
+    line-height: 1.25em !important;
+    max-height: 2.5em !important;     /* 2 lines */
+  }
+}
+
+/* TICARY — instant edition tooltip (replaces native title delay) */
+.as-card .as-edition{ position:relative; }
+
+.as-card .as-edition[data-tc-tip]:hover::after{
+  content: attr(data-tc-tip);
+  position:absolute;
+  left:0;
+  top:100%;
+  margin-top:8px;
+  max-width: 360px;
+  width:max-content;
+  padding:10px 12px;
+  border-radius:12px;
+  background: rgba(15,20,24,.96);
+  border: 1px solid rgba(255,255,255,.14);
+  color:#e8f0f5;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  z-index:9999;
+  white-space: normal;
+  pointer-events:none;
+}
+
+/* TICARY — floating tooltip (body-level, not clipped by line clamp) */
+.tc-tip{
+  position: fixed;
+  max-width: 420px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15,20,24,.96);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #e8f0f5;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  z-index: 2147483647;
+  pointer-events: none;
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.3;
+}
+/* Floating favourites button (bottom-right) */
+#tc-favs-fab{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:46px;
+  height:46px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  background:#3fb1ce;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 12px 30px rgba(0,0,0,.22);
+  z-index:99999;
+  cursor:pointer;
+}
+#tc-favs-fab svg{ width:22px; height:22px; }
+#tc-favs-fab svg *{ stroke:#fff; }
+}
+#tc-favs-fab:hover{
+  filter:brightness(.95);
+}
+/* Floating favourites count badge */
+#tc-favs-fab{ position:fixed; } /* (already set, but ensures badge anchors) */
+
+#tc-favs-fab .tc-badge{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:700;
+  line-height:1;
+  background:#e11d48; /* red badge */
+  color:#fff;
+  border:2px solid rgba(255,255,255,.9);
+}
+
+/* Optional: make the WHOLE button red when it has items */
+#tc-favs-fab.has-count{
+  background:#e11d48 !important;
+  border-color:#e11d48 !important;
+}
+
+/* Floating favourites badge + red state */
+#tc-favs-fab{ position:fixed; }
+#tc-favs-fab .tc-badge{
+  position:absolute; top:-6px; right:-6px;
+  min-width:18px; height:18px; padding:0 5px;
+  border-radius:999px;
+  display:none; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800; line-height:1;
+  background:#e11d48; color:#fff;
+  border:2px solid rgba(255,255,255,.95);
+}
+#tc-favs-fab.has-count{ background:#e11d48!important; border-color:#e11d48!important; }
+
+
+/* iOS Safari: keep bottom buttons above the URL bar / home indicator */
+@media (max-width: 768px){
+  :root{
+    --tc-safe-bot: max(16px, env(safe-area-inset-bottom));
+  }
+
+  /* Filters drawer container */
+  #as-filters,
+  .as-filters,
+  .ds-filters,
+  .as-filter,
+  .as-filter-panel,
+  .as-filters-panel{
+    padding-bottom: var(--tc-safe-bot) !important;
+  }
+
+  /* If there’s a sticky footer area inside the drawer */
+  #as-filters .as-filters-footer,
+  .as-filters .as-filters-footer,
+  .ds-filters .as-filters-footer,
+  #as-filters .as-filter-footer,
+  .as-filters .as-filter-footer,
+  .ds-filters .as-filter-footer,
+  .as-filters .as-actions,
+  #as-filters .as-actions{
+    padding-bottom: var(--tc-safe-bot) !important;
+  }
+
+  /* If Clear/Apply buttons are in a sticky bar */
+  .as-filters .as-sticky,
+  #as-filters .as-sticky,
+  .ds-filters .as-sticky{
+    bottom: var(--tc-safe-bot) !important;
+  }
+}
+
+/* iOS Safari: stop filter controls (Clear/Apply) being clipped */
+@media (max-width: 768px){
+  :root{
+    --tc-safe-bot: max(18px, env(safe-area-inset-bottom));
+  }
+
+  /* Give the controls bar breathing room + lift it above the bottom bar */
+  .asf-controls{
+    padding-bottom: var(--tc-safe-bot) !important;
+    margin-bottom: var(--tc-safe-bot) !important;  /* key: prevents clipping when content pushes */
+  }
+
+  /* If it's fixed/sticky, lift it */
+  .asf-controls{
+    bottom: var(--tc-safe-bot) !important;
+  }
+
+  /* Add scroll buffer so expanding dropdowns can't push buttons under the viewport */
+  .asf-controls::before{
+    content:"";
+    display:block;
+    height: 12px;
+  }
+}
+
+/* Filters footer: make Clear + Search sit 50/50 */
+.asf-controls{
+  display:flex !important;
+  gap:10px !important;
+}
+
+.asf-controls > *{
+  flex:1 1 0 !important;
+  min-width:0 !important;
+}
+
+/* If your Clear button is an <a> and the new one is a <button>, keep heights consistent */
+.asf-controls button,
+.asf-controls a{
+  width:100% !important;
+}
+
+@media (max-width: 768px){
+  .asf-controls{
+    display:flex !important;
+    gap:12px !important;
+    align-items:stretch !important;
+  }
+
+  .asf-controls > *{
+    flex:1 1 0 !important;
+    min-width:0 !important;
+  }
+
+  /* Force both buttons to the same height + shape */
+  .asf-controls a,
+  .asf-controls button{
+    height:52px !important;
+    border-radius:18px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 16px !important;
+    line-height:1 !important;
+    margin:0 !important;
+  }
+
+  /* If one of them has weird extra padding from existing styles */
+  .asf-controls a *,
+  .asf-controls button *{
+    line-height:1 !important;
+  }
+}
+
+/* Filters footer buttons: Clear all + Search side-by-side, equal size */
+.asf-controls{
+  display: flex !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+
+.asf-controls #asf-clear,
+.asf-controls #asf-apply{
+  flex: 1 1 0 !important;
+  width: 100% !important;         /* keep the "full" look */
+  height: 52px !important;        /* same height */
+  border-radius: 18px !important; /* same shape */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+/* Fix vertical misalignment between Clear all + Search */
+.asf-controls{
+  align-items: center !important;  /* center items vertically */
+}
+
+.asf-controls #asf-clear,
+.asf-controls #asf-apply{
+  align-self: center !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* If either button inherits weird margins */
+.asf-controls #asf-clear,
+.asf-controls #asf-apply{
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* ===============================
+   Filters footer button theming
+   =============================== */
+
+/* 1) CLEAR ALL — light background + Ticary blue border (keeps red glow) */
+#asf-clear{
+  background: rgba(255,255,255,.10) !important; /* dark theme: slightly lifted */
+  border: 1px solid rgba(63,177,206,.85) !important;
+  color: rgba(255,255,255,.95) !important;
+}
+
+/* Light theme version: white-ish */
+:root[data-theme="light"] #asf-clear{
+  background: rgba(255,255,255,.98) !important;
+  border: 1px solid rgba(63,177,206,.85) !important;
+  color: rgba(11,18,32,.92) !important;
+}
+
+/* Keep the existing “danger / red glow” behaviour on Clear all (don’t override) */
+/* (We intentionally DO NOT touch its hover/active shadow rules here.) */
+
+
+/* 2) SEARCH — keep current look but REMOVE red glow/animation */
+#asf-apply{
+  /* keep whatever styling it already has from .btn/.asf-clear-main etc */
+  box-shadow: none !important;
+}
+
+/* On hover/active/focus: force no red glow */
+#asf-apply:hover,
+#asf-apply:active,
+#asf-apply:focus,
+#asf-apply:focus-visible{
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* If your red glow comes from a filter-drop-shadow */
+#asf-apply{
+  filter: none !important;
+}
+#asf-apply:hover,
+#asf-apply:active{
+  filter: none !important;
+}
+
+/* If the red effect is implemented via a pseudo element on the base button class */
+#asf-apply::before,
+#asf-apply::after{
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 0 !important;
+}
+
+@media (min-width: 901px){
+
+  /* Hard kill any horizontal scrollbars anywhere */
+  html, body{
+    overflow-x: hidden !important;      /* fallback */
+    overscroll-behavior-x: none !important;
+  }
+
+  /* If supported, clip is even stricter than hidden (prevents “wiggle”) */
+  @supports (overflow: clip){
+    html, body{ overflow-x: clip !important; }
+  }
+
+  /* Your layout wrappers (include whichever exist on your page) */
+  #as-filters,
+  #as-grid,
+  #as-layout,
+  #as-content,
+  #vehicles-list-wrapper,
+  .ds-wrap,
+  .ds-grid,
+  main,
+  .w-container,
+  .container,
+  .section{
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* Make sure the filters column itself can’t create sideways space */
+  #as-filters{
+    width: auto;
+    min-width: 0 !important;
+  }
+
+  /* Prevent any accidental 100vw + padding overflow */
+  *, *::before, *::after{
+    box-sizing: border-box;
+  }
+
+  /* Stops trackpad “pan-x” behaviour on many browsers */
+  html, body{
+    touch-action: pan-y !important;
+  }
+}
+
+@media (min-width: 901px){
+
+  /* …your existing rules… */
+
+  /* ✅ Make the left filters column stay stuck while results scroll */
+  #as-filters{
+    position: sticky !important;
+    top: var(--tc-sticky-top, 0px) !important;
+    align-self: start !important;              /* important if parent is grid/flex */
+    max-height: calc(100vh - var(--tc-sticky-top, 0px)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* ✅ Sticky BREAKS if any ancestor has overflow hidden/auto on Y.
+     Force ONLY Y to be visible on the common wrappers (keep your x lock). */
+  #as-grid,
+  #as-layout,
+  #as-content,
+  #vehicles-list-wrapper,
+  .ds-wrap,
+  .ds-grid,
+  main,
+  .w-container,
+  .container,
+  .section{
+    overflow-y: visible !important;
+  }
+}
+
+@media (min-width: 901px){
+
+  /* Add breathing room under the top filter controls */
+  .asf-controls{
+    padding-bottom: 14px !important;
+    margin-bottom: 14px !important;
+  }
+
+}

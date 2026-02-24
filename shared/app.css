@@ -6122,3 +6122,426 @@ input[type="range"]::-moz-range-thumb {
   }
 
 }
+
+/* Pin colour (same as markers) */
+  :root { --as-pin:#3FB1CE; }
+
+  /* Make sure the filters wrapper can host the glow */
+  #as-filters-body{
+    position:relative;        /* anchor for the glow */
+    z-index:0;                /* keep content above the glow */
+    overflow:visible !important;
+  }
+
+  /* Soft halo behind the filters that spills into the page */
+  #as-filters-body::before{
+    content:"";
+    position:absolute;
+    z-index:-1;               /* sit behind the filters panel */
+    pointer-events:none;
+    /* size & placement */
+    width:clamp(520px, 62vw, 1000px);
+    height:clamp(520px, 62vw, 1000px);
+    left:50%;
+    top:-40px;                /* start a bit above the panel */
+    transform:translateX(-30%);
+    /* the glow */
+    background:
+      radial-gradient(closest-side,
+        color-mix(in srgb, var(--as-pin) 30%, transparent) 0%,
+        color-mix(in srgb, var(--as-pin) 18%, transparent) 30%,
+        transparent 70%);
+    filter: blur(42px);
+    opacity:.9;
+  }
+
+  /* Slightly subtler on very large screens */
+  @media (min-width: 1600px){
+    #as-filters-body::before{ filter: blur(54px); opacity:.85; }
+  }
+
+  /* Center the glow more on narrow viewports */
+  @media (max-width: 820px){
+    #as-filters-body::before{
+      transform:translateX(-50%);
+      top:-20px;
+      width:clamp(440px, 90vw, 820px);
+      height:clamp(440px, 90vw, 820px);
+    }
+  }
+
+ /* make + model on one neat line */
+  .as-body .as-title{
+    display:flex;
+    align-items:baseline;
+    gap:.4ch;          /* small space between make & model */
+    white-space:nowrap;
+    min-width:0;       /* enables ellipsis on model */
+  }
+  .as-title .as-make{ font-weight:800; }
+  .as-title .as-model{
+    font-weight:700;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    min-width:0;
+  }
+
+/* Sort select: pin-blue with WHITE text + white chevron */
+  #as-listbar select#as-sort,
+  .as-listbar select#as-sort{
+    -webkit-appearance:none; -moz-appearance:none; appearance:none;
+    background: var(--pin, #3FB1CE);
+    color:#fff;                   /* <- white text */
+    font-weight:900;
+    border:1px solid rgba(0,0,0,.25);
+    border-radius:14px;
+    height:44px;
+    padding:0 42px 0 16px;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='%23ffffff'><path d='M7 10l5 5 5-5'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    background-size:14px 14px;
+  }
+  /* dropdown menu text stays dark for legibility */
+  #as-listbar select#as-sort option,
+  .as-listbar select#as-sort option{ color:#0A0E12; }
+
+  /* Listbar "Hide filters" — force bold regardless of element type/wrapper */
+  #as-listbar #as-toggle-filters,
+  .as-listbar #as-toggle-filters,
+  #as-listbar [data-as-action="toggle-filters"],
+  .as-listbar [data-as-action="toggle-filters"],
+  #as-listbar .as-toggle-filters,
+  .as-listbar .as-toggle-filters,
+  #as-listbar a#as-toggle-filters,
+  #as-listbar button#as-toggle-filters{
+    font-weight:900 !important;
+  }
+  /* ensure inner spans inherit the bold */
+  #as-listbar #as-toggle-filters *,
+  .as-listbar #as-toggle-filters *{ font-weight:inherit !important; }
+
+/* Vehicle card "View details" — pin-blue outline + inward glow */
+  #as-grid .as-card .as-cta,
+  #as-grid .as-card .as-btn,
+  .as-card .as-cta,
+  .as-card .as-btn{
+    -webkit-appearance:none; appearance:none;
+    border:1px solid var(--pin, #3FB1CE);
+    color: var(--pin, #3FB1CE);
+    background: transparent;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:800;
+    line-height:1;
+    transition: box-shadow .22s ease, color .22s ease, background-color .22s ease, transform .08s ease;
+    box-shadow: inset 0 0 0 0 rgba(63,177,206,0);
+  }
+  /* Hover: subtle inner glow and slight fill */
+  #as-grid .as-card .as-cta:hover,
+  #as-grid .as-card .as-btn:hover,
+  .as-card .as-cta:hover,
+  .as-card .as-btn:hover{
+    box-shadow:
+      inset 0 0 0 9999px rgba(63,177,206,.12),
+      inset 0 0 14px rgba(63,177,206,.35),
+      0 2px 10px rgba(63,177,206,.18);
+    color:#fff;
+    background: rgba(63,177,206,.08);
+  }
+  /* Focus: clear accessible ring + inner wash */
+  #as-grid .as-card .as-cta:focus-visible,
+  #as-grid .as-card .as-btn:focus-visible,
+  .as-card .as-cta:focus-visible,
+  .as-card .as-btn:focus-visible{
+    outline:none;
+    box-shadow:
+      0 0 0 2px #0f1418,
+      0 0 0 4px var(--pin, #3FB1CE),
+      inset 0 0 0 9999px rgba(63,177,206,.12);
+  }
+
+  /* If your heart/favourite uses a CTA class, keep it untouched */
+  .as-card .as-cta-heart,
+  .as-card .as-fav,
+  .as-card .as-heart{
+    border:0 !important;
+    box-shadow:none !important;
+    background:transparent !important;
+    color:inherit !important;
+  }
+
+#as-grid .as-card .as-cta,
+  #as-grid .as-card .as-btn,
+  .as-card .as-cta,
+  .as-card .as-btn{
+    color:#fff; /* keep border pin-blue as-is */
+  }
+
+/* Year selects – same look as your other selects */
+  .asf-year-select{
+    -webkit-appearance:none; -moz-appearance:none; appearance:none;
+    background: rgba(255,255,255,.06);
+    color: var(--text, #e8f0f5);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:12px;
+    height:44px; width:100%;
+    padding:0 42px 0 12px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='%23c9d3dc'><path d='M7 10l5 5 5-5'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:14px 14px;
+  }
+  .asf-year-select:focus-visible{ outline:none; border-color:rgba(255,255,255,.32) }
+  .asf-year-select option{ color:#0A0E12 }
+
+/* Reserve a line when EDITION is missing (prevents card “shrink”) */
+.as-card .as-edition{
+  display:block;
+  line-height:1.15;
+  min-height:1.15em;               /* keep one line’s height */
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.as-card .as-edition:empty::before{
+  content:"\00a0";                 /* non-breaking space = visual spacer */
+  display:inline-block;
+}
+
+
+/* Force pin-blue primary action in popups */
+  .mapboxgl-popup a.as-pop-view{
+    background: var(--pin, #3FB1CE) !important;
+    color: #fff !important;
+    border: 1px solid rgba(0,0,0,.2);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter .18s ease, box-shadow .18s ease, transform .08s ease;
+  }
+  .mapboxgl-popup a.as-pop-view:hover{
+    filter: brightness(.96);
+    box-shadow: 0 8px 24px rgba(63,177,206,.35), inset 0 0 0 9999px rgba(255,255,255,.04);
+  }
+
+/* Pin-blue outline ONLY on these groups (id OR class) */
+  #as-filters-body :is(
+    #asf-vehicle,.asf-vehicle,
+    #asf-specs,.asf-specs,
+    #asf-year,.asf-year,
+    #asf-price,.asf-price,
+    #asf-mileage,.asf-mileage,
+    #asf-distance,.asf-distance
+  ){
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;                 /* keeps rounded corners */
+    /* Use inset box-shadow as a 1px outline (survives border resets) */
+    box-shadow: inset 0 0 0 1px var(--pin, #3FB1CE) !important;
+  }
+
+  /* Optional: a touch of padding if your wrapper has none */
+  #as-filters-body :is(
+    #asf-vehicle,.asf-vehicle,
+    #asf-specs,.asf-specs,
+    #asf-year,.asf-year,
+    #asf-price,.asf-price,
+    #asf-mileage,.asf-mileage,
+    #asf-distance,.asf-distance
+  ) > :is(summary,.asf-head){ padding:10px 12px; font-weight:900; }
+  #as-filters-body :is(
+    #asf-vehicle,.asf-vehicle,
+    #asf-specs,.asf-specs,
+    #asf-year,.asf-year,
+    #asf-price,.asf-price,
+    #asf-mileage,.asf-mileage,
+    #asf-distance,.asf-distance
+  ) .asf-section-body{ padding:10px 12px 14px; }
+
+/* Tiny style so the toggle looks like your listbar CTAs */
+  #as-style-toggle{
+    height:44px; padding:0 14px; border-radius:12px; font-weight:900;
+    border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.18); color:inherit;
+    cursor:pointer; margin-left:8px;
+  }
+  #as-style-toggle:hover{ border-color:rgba(255,255,255,.28); }
+
+/* Sort select: keep pin-blue, but make label NOT bold */
+  #as-listbar select#as-sort,
+  .as-listbar select#as-sort{
+    font-weight: 500 !important;                 /* was bold */
+    font-variation-settings: "wght" 500 !important; /* for variable fonts */
+  }
+  /* Ensure nested spans (some browsers wrap text) inherit the lighter weight */
+  #as-listbar select#as-sort *{ font-weight: inherit !important; font-variation-settings: inherit !important; }
+
+/* Ticary custom pins (replace default Mapbox pin entirely) */
+  .as-pin{
+    width:28px; height:28px;
+    border-radius:999px;
+    background:#3FB1CE;                  /* pin blue */
+    border:1px solid rgba(255,255,255,.95); /* thin white outline */
+    color:#fff;                           /* white number */
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:13px; line-height:1;
+    box-shadow:0 4px 12px rgba(0,0,0,.35);
+    cursor:pointer;
+  }
+  .as-pin.as-pin--single{
+  font-size:13px; /* same as .as-pin so "1" is visible */
+}
+
+  /* optional: tiny hover pop */
+  .as-pin:hover{ filter:brightness(.98); }
+
+/* tiny inline nudge next to the listbar when user picks distance w/o origin */
+  #as-distance-nudge{ margin-left:10px; display:inline-block; font-size:12px; opacity:.85; }
+
+/* Dual range track & thumbs – unified (same in light & dark) */
+.as-range{
+  position:relative;
+  height:34px;
+  display:block;
+}
+
+/* Native track completely hidden; we draw our own bar */
+.as-range input[type="range"]{
+  -webkit-appearance:none;
+  appearance:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:8px;
+  height:18px;
+  margin:0;
+  background:transparent;
+  pointer-events:auto;
+}
+.as-range input[type="range"]::-webkit-slider-runnable-track{
+  height:6px;
+  background:transparent !important;
+  border-color:transparent !important;
+}
+.as-range input[type="range"]::-moz-range-track{
+  height:6px;
+  background:transparent !important;
+  border-color:transparent !important;
+}
+
+/* Thumb – blue circle with slight glow */
+.as-range input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+.as-range input[type="range"]::-moz-range-thumb{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:var(--pin,#3FB1CE);
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 1px 6px rgba(0,0,0,.4);
+  cursor:pointer;
+}
+
+/* Base bar – dark so it shows clearly on white panels */
+.as-range .as-range-track{
+  position:absolute;
+  left:0;
+  right:0;
+  top:16px;
+  height:6px;
+  border-radius:99px;
+  background:#222a33;
+  border:1px solid #2f3944;
+  overflow:hidden;
+  pointer-events:none;
+}
+
+/* Filled segment between thumbs – bright blue gradient */
+.as-range .as-range-track::before{
+  content:"";
+  position:absolute;
+  top:-1px;
+  bottom:-1px;
+  left:var(--a,0%);
+  right:calc(100% - var(--b,100%));
+  background:linear-gradient(90deg,#3FB1CE,#1D8CFF);
+  border:1px solid #1D8CFF;
+  border-radius:inherit;
+}
+
+/* Layering: both thumbs above the bar */
+.as-range input[type="range"]{
+  z-index:2;
+}
+.as-range input[type="range"].is-top{
+  z-index:3;
+}
+
+/* TICARY — Map pin hover tooltip (tight, shrink-to-fit) */
+.tc-pin-tip{
+  pointer-events:none;
+}
+
+/* Make the popup container shrink to its content */
+.tc-pin-tip.mapboxgl-popup{
+  max-width: none !important;
+  width: auto !important;
+}
+
+.tc-pin-tip .mapboxgl-popup-content{
+  display: inline-flex !important;     /* shrink-wrap */
+  align-items: center !important;
+  justify-content: center !important;  /* center text so no dead space */
+  width: fit-content !important;
+  max-width: 70vw !important;          /* safety on very long dealer names */
+
+  padding: 7px 12px !important;
+  border-radius: 999px !important;
+
+  background: rgba(2,6,23,.92) !important;
+  border: 1px solid rgba(63,177,206,.55) !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.45) !important;
+
+  overflow: visible !important;
+}
+
+/* Text itself */
+.tc-pin-tip .tc-tip-txt{
+  display: inline-block !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  letter-spacing: .01em !important;
+  line-height: 1.15 !important;
+  color: rgba(255,255,255,.96) !important;
+
+  white-space: nowrap !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Remove Mapbox triangle + close btn */
+.tc-pin-tip .mapboxgl-popup-tip{ display:none !important; }
+.tc-pin-tip .mapboxgl-popup-close-button{ display:none !important; }
+
+/* Light theme */
+:root[data-theme="light"] .tc-pin-tip .mapboxgl-popup-content{
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid rgba(63,177,206,.50) !important;
+  box-shadow: 0 14px 40px rgba(15,23,42,.16) !important;
+  color: #000 !important; /* <-- ADD THIS */
+}
+
+

@@ -8204,15 +8204,11 @@ html[data-theme="light"] .as-price-badge{
   border-bottom: 1px solid rgba(0,0,0,.08) !important;
 }
 
-/* Sticky AI button inside filters column */
-#tc-ai-search-top{
+/* Sticky AI button — clean version */
+#as-filters #tc-ai-search-top{
   position: sticky;
-  top: 12px;           /* adjust if you want it tighter */
-  z-index: 50;
-}
-
-#tc-ai-search-top .tc-aiTopWrap,
-#tc-ai-search-top{
-  /* stops it looking weird while it sticks */
-  background: var(--tc-bg, #0a0e14);
+  top: 0;              /* flush to top of filters column */
+  z-index: 20;
+  margin: 0 !important;
+  padding-top: 0 !important;
 }

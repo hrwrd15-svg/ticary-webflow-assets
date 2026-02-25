@@ -8404,3 +8404,13 @@ html[data-theme="light"] .as-cardPrice{
 .as-financeWrap{
   width: calc(100% + 18px) !important;  /* compensate for removed gutter */
 }
+
+/* Make the right-side price/finance stack flush to the card edge */
+.as-card .as-actions{
+  margin-right: -12px;            /* cancels .as-body padding-right */
+}
+
+/* Make the price block fill the same width as the finance block */
+.as-card .tc-card-price-inline{
+  width: 100%;
+}

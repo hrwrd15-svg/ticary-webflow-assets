@@ -8352,3 +8352,39 @@ html[data-theme="light"] .as-cardPrice{
 .as-financeWrap{
   border-radius:0 !important;
 }
+
+/* ===== FIX: keep the new price pill visible (it uses .as-cta) ===== */
+.as-card .as-cta.as-pricePill,
+.as-card .as-cta.tc-price-button{
+  display:flex !important;
+}
+
+/* keep old “View details” links hidden if any exist */
+.as-card a.as-cta,
+.as-card .as-view-details,
+.as-card .as-btn{
+  display:none !important;
+}
+
+/* ===== make Price + Finance look like the old stacked block ===== */
+.as-bottom{
+  align-items:start; /* stops the right column dropping down */
+}
+
+.as-actions{
+  display:grid;
+  grid-template-rows:auto auto;
+  gap:0;
+}
+
+.as-pricePill{
+  width:100%;
+  justify-content:center;
+  border-radius:18px 18px 0 0;
+}
+
+.as-financeWrap{
+  margin-top:0 !important;
+  width:100%;
+  border-radius:0 0 18px 18px;
+}

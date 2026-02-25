@@ -48,20 +48,19 @@
     el.style.setProperty("display","none","important");
   });
 
+   document.querySelectorAll('#tc-header a').forEach(a=>{
+  const txt = (a.textContent || '').trim().toLowerCase();
+  if (txt === 'home') {
+    a.style.setProperty('display','none','important');
+  }
+});
+
   // hide the desktop nav row (the links that used to sit in the header)
   const header = document.getElementById("tc-header");
   const nav = header && header.querySelector(".tc-header-nav");
   if (nav){
     nav.style.setProperty("display","none","important");
   }
-
-   // also hide any direct Home link sitting outside nav
-document.querySelectorAll('#tc-header a').forEach(a=>{
-  const txt = (a.textContent || '').trim().toLowerCase();
-  if (txt === 'home') {
-    a.style.setProperty('display','none','important');
-  }
-});
 
   // (optional) if you still see any random header link groups, nuke them:
   // document.querySelectorAll("#tc-header .tc-header-links").forEach(el=>{

@@ -8140,3 +8140,25 @@ body.tc-filter-panel-open{
   border-radius: 0 !important;
   overflow: hidden !important;
 }
+
+/* ================================
+   TICARY — Price badge: sharp + flush top-left
+================================== */
+
+.as-price-badge{
+  border-radius: 0 !important;     /* remove pill rounding */
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+}
+
+/* Ensure card can anchor it properly */
+.as-card{
+  position: relative;
+}
+
+/* If badge is absolutely positioned already, enforce it */
+.as-price-badge{
+  position: absolute !important;
+}

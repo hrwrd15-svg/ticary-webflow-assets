@@ -8069,3 +8069,68 @@ body.tc-filter-panel-open{
 .as-card {
   position: relative !important;
 }
+
+/* ================================
+   TICARY — Mobile drawer (modern)
+   - no pill buttons
+   - sharp edges
+   - subtle hop on hover
+================================== */
+
+.tc-mnav-drawer{
+  border-radius: 0 !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.55) !important;
+}
+
+.tc-mnav-top{
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.tc-mnav-links{
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 14px;
+  gap: 0;
+}
+
+.tc-mnav-links a{
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 10px;
+  margin: 0;
+  border-radius: 0 !important;           /* kills pills */
+  background: transparent !important;    /* kills pills */
+  border: 0 !important;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: .2px;
+
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  transition: transform .14s ease, background-color .14s ease;
+  will-change: transform;
+}
+
+.tc-mnav-links a:last-child{
+  border-bottom: 0;
+}
+
+/* hover "hop" */
+.tc-mnav-links a:hover{
+  transform: translateY(-2px);
+  background-color: rgba(63,177,206,.08) !important; /* subtle ticary tint */
+}
+
+/* click feel */
+.tc-mnav-links a:active{
+  transform: translateY(0px) scale(.99);
+}
+
+/* optional: make the “auth section” feel grouped (if you want later) */
+/* .tc-mnav-links a.tc-login-link,
+.tc-mnav-links a.tc-account-link,
+.tc-mnav-links a.tc-garage-link,
+.tc-mnav-links a.tc-logout-btn{
+  font-weight: 750;
+} */

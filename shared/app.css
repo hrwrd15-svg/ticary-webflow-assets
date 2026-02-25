@@ -8174,3 +8174,12 @@ body.tc-filter-panel-open{
   border-right: 1px solid rgba(63,177,206,.6) !important;
   border-bottom: 1px solid rgba(63,177,206,.6) !important;
 }
+
+/* ================================
+   TICARY — Price badge scale up
+================================== */
+
+.as-price-badge{
+  font-size: 1.08rem !important;   /* ~10–12% bigger text */
+  padding: 10px 14px !important;   /* slightly larger block */
+}

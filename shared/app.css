@@ -8212,3 +8212,22 @@ html[data-theme="light"] .as-price-badge{
   margin: 0 !important;
   padding-top: 0 !important;
 }
+
+/* =========================
+   TICARY — Header edge alignment (override)
+   Keeps logo hard-left + actions hard-right on wide screens
+========================= */
+
+#tc-header .th-inner{
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+
+  /* match your page gutter spacing */
+  padding-left: clamp(16px, 2.8vw, 40px) !important;
+  padding-right: clamp(16px, 2.8vw, 40px) !important;
+}
+
+/* make sure left + right stay pinned */
+#tc-header .th-logo{ margin-right: auto !important; }
+#tc-header .th-cta{ margin-left: auto !important; }

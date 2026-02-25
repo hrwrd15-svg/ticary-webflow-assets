@@ -22,44 +22,6 @@
     );
   }
 
-  // Where to display the price now
-  function ensurePriceSpot(card){
-  // Create (or reuse) the inline price element
-  let el = card.querySelector(".tc-card-price-inline");
-  if (!el){
-    el = document.createElement("div");
-    el.className = "tc-card-price-inline";
-  }
-
-  // ✅ BEST: insert as a sibling directly ABOVE the finance WRAP (not inside finance layout)
-  const financeWrap = card.querySelector(".as-financeWrap");
-  if (financeWrap && financeWrap.parentNode){
-    financeWrap.parentNode.insertBefore(el, financeWrap);
-    return el;
-  }
-
-  // Next best: insert above the finance element itself
-  const financeEl =
-    card.querySelector(".as-finance-inline") ||
-    card.querySelector('[fs-list-field="finance_monthly"]') ||
-    card.querySelector(".as-finance");
-
-  if (financeEl && financeEl.parentNode){
-    financeEl.parentNode.insertBefore(el, financeEl);
-    return el;
-  }
-
-  // Fallback: put it near the bottom/actions area
-  const host =
-    card.querySelector(".as-actions") ||
-    card.querySelector(".as-bottom") ||
-    card.querySelector(".as-footer") ||
-    card.querySelector(".as-meta-b") ||
-    card;
-
-  host.appendChild(el);
-  return el;
-}
 
   function getPriceText(card){
     // Prefer hidden fs-list-field="price" if present
@@ -72,16 +34,26 @@
   }
 
   function hydrateCard(card){
-    if (!card || card.__tcHydratedPrice) return;
+  if (!card || card.__tcHydratedPrice) return;
 
-    const price = getPriceText(card);
-    if (price){
-      const spot = ensurePriceSpot(card);
-      spot.textContent = price;
-    }
+  const price =
+    (card.querySelector('[fs-list-field="price"]')?.textContent || '').trim() ||
+    (card.querySelector('.as-price-badge')?.textContent || '').trim();
 
-    card.__tcHydratedPrice = 1;
+  if (!price) return;
+
+  // Find the original View Details button
+  const viewBtn =
+    card.querySelector('.as-view') ||
+    card.querySelector('.as-cta');
+
+  if (viewBtn){
+    viewBtn.textContent = price;
+    viewBtn.classList.add('tc-price-button');
   }
+
+  card.__tcHydratedPrice = true;
+}
 
   function hydrateAll(){
     $$(".as-card").forEach(hydrateCard);

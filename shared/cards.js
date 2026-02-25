@@ -31,14 +31,20 @@
     el.className = "tc-card-price-inline";
   }
 
-  // We want it ABOVE finance
+  // ✅ BEST: insert as a sibling directly ABOVE the finance WRAP (not inside finance layout)
+  const financeWrap = card.querySelector(".as-financeWrap");
+  if (financeWrap && financeWrap.parentNode){
+    financeWrap.parentNode.insertBefore(el, financeWrap);
+    return el;
+  }
+
+  // Next best: insert above the finance element itself
   const financeEl =
     card.querySelector(".as-finance-inline") ||
     card.querySelector('[fs-list-field="finance_monthly"]') ||
     card.querySelector(".as-finance");
 
   if (financeEl && financeEl.parentNode){
-    // insert right before finance
     financeEl.parentNode.insertBefore(el, financeEl);
     return el;
   }

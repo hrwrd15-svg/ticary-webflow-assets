@@ -927,7 +927,7 @@ window.__ticaryApply = function () {
               </div>
             </div>
           </div>
-        `, false)}
+        `, true)}
 
         ${sec('asf-year', 'Year', `
           <div class="grid-2">

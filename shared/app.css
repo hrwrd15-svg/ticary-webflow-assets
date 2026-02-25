@@ -8261,3 +8261,22 @@ html[data-theme="light"] .as-cardPrice{
   background:#3fb1ce;
   color:#fff;
 }
+
+/* === Card: remove price pill + remove view details button === */
+
+/* 1) kill the pill */
+.as-card .as-price-badge,
+.as-card .as-price-pill,
+.as-card .as-pill-price {
+  display: none !important;
+}
+
+/* 2) remove view-details button (we'll make the whole card clickable) */
+.as-card .as-view,
+.as-card .as-viewdetails,
+.as-card [data-view-details],
+.as-card [data-action="view-details"],
+.as-card .as-cta,
+.as-card .as-btn {
+  display: none !important;
+}

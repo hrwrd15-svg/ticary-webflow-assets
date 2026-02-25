@@ -8424,3 +8424,13 @@ html[data-theme="light"] .as-cardPrice{
 .as-actions{
   margin-right: -12px; /* cancels .as-body padding */
 }
+
+/* Flush the whole bottom row to the card edge (cancels .as-body right padding) */
+.as-bottom{
+  margin-right: -12px;   /* if your .as-body padding-right isn't 12px, change this */
+}
+
+/* Keep the actions block pinned hard-right inside the bottom row */
+.as-actions{
+  justify-self: end;
+}

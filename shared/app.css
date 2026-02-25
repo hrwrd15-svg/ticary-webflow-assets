@@ -8183,3 +8183,23 @@ body.tc-filter-panel-open{
   font-size: 0.90rem !important;   /* ~10–12% bigger text */
   padding: 10px 14px !important;   /* slightly larger block */
 }
+
+/* ================================
+   TICARY — Price badge theme styles
+================================== */
+
+/* DARK (default) */
+.as-price-badge{
+  background: rgba(20,25,32,.85);
+  color: #fff;
+}
+
+/* LIGHT theme */
+html[data-theme="light"] .as-price-badge{
+  background: #3fb1ce !important;
+  color: #ffffff !important;
+
+  /* separator edge for light */
+  border-right: 1px solid rgba(0,0,0,.08) !important;
+  border-bottom: 1px solid rgba(0,0,0,.08) !important;
+}

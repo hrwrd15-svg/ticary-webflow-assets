@@ -8296,3 +8296,44 @@ html[data-theme="light"] .as-cardPrice{
   margin:10px 0 6px 0;      /* space above finance */
   width:fit-content;
 }
+
+/* --- Card right-side stack: align to top + no gaps --- */
+.as-bottom .as-actions{
+  justify-content: flex-start !important; /* was flex-end -> caused "too low" */
+  gap: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* if your price element is directly above financeWrap */
+.as-bottom .as-actions .as-financeWrap{
+  margin-top: 0 !important;
+}
+
+/* --- Price block styling (rename selector if your class differs) --- */
+/* Use whichever you actually added in bundle.js:
+   .as-priceWrap  OR  .as-price-inline  OR  .as-price-pill
+*/
+.as-priceWrap,
+.as-price-inline,
+.as-price-pill{
+  width: 100%;
+  background: #3fb1ce;
+  color: #fff;
+  border: 1px solid rgba(63,177,206,.22);
+  border-bottom: 0;                 /* so it "joins" the finance border */
+  border-radius: 0;                 /* sharp/modern */
+  padding: 10px 10px;               /* matches financeWrap padding */
+  min-height: 46px;                 /* keeps it feeling same “block size” */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+/* Make finance block join seamlessly under price */
+.as-bottom .as-actions .as-financeWrap{
+  border-radius: 0 !important;      /* sharp/modern */
+  border-top: 0 !important;         /* join line removed */
+}

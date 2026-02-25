@@ -8162,3 +8162,15 @@ body.tc-filter-panel-open{
 .as-price-badge{
   position: absolute !important;
 }
+
+/* ================================
+   TICARY — Price badge clean edge
+================================== */
+
+.as-price-badge{
+  border: none !important;
+
+  /* subtle separator only */
+  border-right: 1px solid rgba(63,177,206,.6) !important;
+  border-bottom: 1px solid rgba(63,177,206,.6) !important;
+}

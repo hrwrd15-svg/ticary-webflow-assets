@@ -8419,3 +8419,8 @@ html[data-theme="light"] .as-cardPrice{
 .as-card .as-actions{
   margin-right: -12px; /* matches .as-body padding */
 }
+
+/* Make the right-side (price+finance) block flush to the card edge */
+.as-actions{
+  margin-right: -12px; /* cancels .as-body padding */
+}

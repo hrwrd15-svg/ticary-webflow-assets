@@ -8405,82 +8405,44 @@ html[data-theme="light"] .as-cardPrice{
   width: calc(100% + 18px) !important;  /* compensate for removed gutter */
 }
 
-/* Make the right-side price/finance stack flush to the card edge */
-.as-card .as-actions{
-  margin-right: -12px;            /* cancels .as-body padding-right */
+/* ================================
+   Card bottom right block: FLUSH + NO CLIP (clean)
+================================ */
+
+/* allow flush blocks to sit on the edge without getting clipped */
+.as-card{
+  overflow: visible !important;
 }
 
-/* Make the price block fill the same width as the finance block */
-.as-card .tc-card-price-inline{
-  width: 100%;
-}
-
-/* Make the right-side action stack flush with the card edge */
-.as-card .as-actions{
-  margin-right: -12px; /* matches .as-body padding */
-}
-
-/* Make the right-side (price+finance) block flush to the card edge */
-.as-actions{
-  margin-right: -12px; /* cancels .as-body padding */
-}
-
-/* Flush the whole bottom row to the card edge (cancels .as-body right padding) */
-.as-bottom{
-  margin-right: -12px;   /* if your .as-body padding-right isn't 12px, change this */
-}
-
-/* Keep the actions block pinned hard-right inside the bottom row */
-.as-actions{
-  justify-self: end;
-}
-
-/* --- Card bottom row: make the right blocks flush to card edge --- */
-.as-bottom{
-  margin-right: -12px;   /* cancels .as-body right padding */
-  margin-bottom: -12px;  /* cancels .as-body bottom padding */
-}
-
-/* keep dealer text nicely padded (so only the right blocks go flush) */
-.as-bottom .as-dealer{
-  padding-right: 12px;
-  padding-bottom: 12px;
-}
-
-/* make sure the right stack fills its column cleanly */
-.as-bottom .as-actions{
-  align-self: stretch;
-}
-.as-bottom .as-actions > *{
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* --- Make the right action stack flush WITHOUT clipping --- */
-
-/* 1) Remove right padding from the whole card body */
+/* restore normal padding (your hack set this to 0) */
 .as-body{
-  padding-right: 0 !important;
-}
-
-/* 2) Add the padding back to the content blocks that should stay inset */
-.as-titleRow,
-.as-line,
-.as-chips{
   padding-right: 12px !important;
 }
 
-/* 3) Bottom row: keep dealer padded, actions flush */
+/* bottom row should span full card width */
+.as-bottom{
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* make ONLY the actions column reach the card edge */
+.as-bottom{
+  padding-right: 0 !important;     /* actions can touch edge */
+}
+
+/* keep dealer side padded like before */
 .as-bottom .as-dealer{
   padding-right: 12px !important;
 }
 
-/* 4) Ensure actions stay inside and fill their column */
+/* hard-right the actions column */
 .as-bottom .as-actions{
-  justify-self: end;
-  align-self: stretch;
+  justify-self: end !important;
+  margin-right: 0 !important;
 }
+
+/* ensure the price + finance blocks fill that actions column */
 .as-bottom .as-actions > *{
-  width: 100%;
-  box-sizing: border-box;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }

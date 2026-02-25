@@ -172,7 +172,6 @@ function isUK(lat, lng){
   +     ' data-url="'+safe(href)+'">'
 
   +     '<a class="as-media as-link" href="'+safe(href)+'" target="_blank" rel="noopener">'
-  +       '<span class="as-price-badge">'+safe(money(c.price_gbp))+'</span>'
   +       '<span class="as-thumb" aria-hidden="true" style="'+(img ? ('background-image:url('+String(img).replace(/"/g,'%22')+');') : '')+'"></span>'
   +     '</a>'
 
@@ -200,7 +199,7 @@ function isUK(lat, lng){
   +         '</div>'
 
   +         '<div class="as-actions">'
-  +           '<a class="as-cta as-view" href="'+safe(href)+'" target="_blank" rel="noopener">View details</a>'
+  +         '<div class="as-cta as-pricePill" data-open="1" role="button" tabindex="0">'+safe(money(c.price_gbp))+'</div>'
   +           '<div class="as-financeWrap" aria-label="Finance">'
   +             '<div class="as-financeLabel">Finance</div>'
   +             '<span class="as-finance-inline" fs-list-field="finance_monthly" style="display:none;"></span>'

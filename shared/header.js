@@ -612,7 +612,7 @@
       btn.type = 'button';
       btn.className = 'tc-mnav-btn';
       btn.setAttribute('aria-label','Open menu');
-      btn.innerHTML = '<span class="tc-mnav-ico"><span></span></span><span>Menu</span>';
+      btn.innerHTML = '<span class="tc-mnav-ico"><span></span></span>';
       cta.appendChild(btn);
     }
 

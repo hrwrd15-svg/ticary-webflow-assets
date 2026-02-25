@@ -8231,3 +8231,33 @@ html[data-theme="light"] .as-price-badge{
 /* make sure left + right stay pinned */
 #tc-header .th-logo{ margin-right: auto !important; }
 #tc-header .th-cta{ margin-left: auto !important; }
+
+
+/* Card price lives in the action row now */
+.as-card{ cursor:pointer; }
+
+.as-actions{
+  display:flex;
+  align-items:stretch;
+  gap:12px;
+}
+
+.as-cardPrice{
+  display:flex;
+  align-items:center;
+  font-weight:800;
+  font-size:1.05rem; /* ~10-15% bigger vibe */
+  line-height:1;
+  padding:12px 14px;
+  background: rgba(20,25,32,.9);
+  color: #fff;
+  border: 0;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+/* Light theme version */
+html[data-theme="light"] .as-cardPrice{
+  background:#3fb1ce;
+  color:#fff;
+}

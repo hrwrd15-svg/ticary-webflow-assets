@@ -169,11 +169,10 @@ function isUK(lat, lng){
   +     ' data-lat="'+safe(k.lat)+'"'
   +     ' data-lng="'+safe(k.lng)+'"'
   +     ' data-vehicle-id="'+safe(c.id||'')+'"'
-  +     ' data-url="'+safe(href)+'"
-  +     ' data-tcdm-open="'+safe(id)+'">'
+  +     ' data-url="'+safe(href)+'">'
 
   +     '<a class="as-media as-link" href="'+safe(href)+'" target="_blank" rel="noopener">'
-  +       
+  +       '<span class="as-price-badge">'+safe(money(c.price_gbp))+'</span>'
   +       '<span class="as-thumb" aria-hidden="true" style="'+(img ? ('background-image:url('+String(img).replace(/"/g,'%22')+');') : '')+'"></span>'
   +     '</a>'
 
@@ -200,13 +199,13 @@ function isUK(lat, lng){
   +           (phone ? '<div class="as-dealerPhone">'+safe(phone)+'</div>' : '')
   +         '</div>'
 
- +         '<div class="as-actions">'
- +           '<div class="as-cardPrice" fs-list-field="price">'+safe(displayPrice)+'</div>'
- +           '<div class="as-financeWrap" aria-label="Finance">'
- +             '<div class="as-financeLabel">Finance</div>'
- +             '<span class="as-finance-inline" fs-list-field="finance_monthly" style="display:none;"></span>'
- +           '</div>'
- +         '</div>'
+  +         '<div class="as-actions">'
+  +           '<a class="as-cta as-view" href="'+safe(href)+'" target="_blank" rel="noopener">View details</a>'
+  +           '<div class="as-financeWrap" aria-label="Finance">'
+  +             '<div class="as-financeLabel">Finance</div>'
+  +             '<span class="as-finance-inline" fs-list-field="finance_monthly" style="display:none;"></span>'
+  +           '</div>'
+  +         '</div>'
   +       '</div>'
 
   +     '</div>'
@@ -5156,3 +5155,4 @@ if (t === 'fill' && has(id, /hillshade/i)) {
   aiBtn.addEventListener('mouseenter', e => { e.stopImmediatePropagation(); }, true);
   aiBtn.addEventListener('mouseover',  e => { e.stopImmediatePropagation(); }, true);
 })();
+

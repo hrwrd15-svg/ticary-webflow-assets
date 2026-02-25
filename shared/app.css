@@ -8446,3 +8446,16 @@ html[data-theme="light"] .as-cardPrice{
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* Let ONLY the actions column bypass the as-body padding */
+.as-body{
+  position: relative; /* harmless, but helps if anything ever goes absolute */
+}
+
+.as-bottom .as-actions{
+  /* this cancels the .as-body right padding (12px) */
+  margin-right: -12px !important;
+}
+
+/* make sure nothing clips when we "escape" */
+.as-card{ overflow: visible !important; }

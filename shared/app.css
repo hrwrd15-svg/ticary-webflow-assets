@@ -8414,3 +8414,8 @@ html[data-theme="light"] .as-cardPrice{
 .as-card .tc-card-price-inline{
   width: 100%;
 }
+
+/* Make the right-side action stack flush with the card edge */
+.as-card .as-actions{
+  margin-right: -12px; /* matches .as-body padding */
+}

@@ -8180,6 +8180,6 @@ body.tc-filter-panel-open{
 ================================== */
 
 .as-price-badge{
-  font-size: 9.90rem !important;   /* ~10–12% bigger text */
+  font-size: 0.90rem !important;   /* ~10–12% bigger text */
   padding: 10px 14px !important;   /* slightly larger block */
 }

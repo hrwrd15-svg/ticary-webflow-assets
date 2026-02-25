@@ -8337,3 +8337,18 @@ html[data-theme="light"] .as-cardPrice{
   border-radius: 0 !important;      /* sharp/modern */
   border-top: 0 !important;         /* join line removed */
 }
+
+/* Replace View Details with Price */
+.tc-price-button{
+  background:#3fb1ce !important;
+  color:#fff !important;
+  font-weight:950 !important;
+  font-size:18px !important;
+  border-radius:0 !important;
+  cursor:default; /* since whole card opens */
+}
+
+/* Finance remains unchanged but sharp edges */
+.as-financeWrap{
+  border-radius:0 !important;
+}

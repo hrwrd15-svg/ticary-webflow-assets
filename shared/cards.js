@@ -24,28 +24,36 @@
 
   // Where to display the price now
   function ensurePriceSpot(card){
-    // Try common "bottom row" areas first
-    let host =
-      card.querySelector(".as-actions") ||
-      card.querySelector(".as-bottom") ||
-      card.querySelector(".as-footer") ||
-      card.querySelector(".as-meta-b") ||
-      card;
+  // Create (or reuse) the inline price element
+  let el = card.querySelector(".tc-card-price-inline");
+  if (!el){
+    el = document.createElement("div");
+    el.className = "tc-card-price-inline";
+  }
 
-    // Create (or reuse) a dedicated inline price element
-    let el = card.querySelector(".tc-card-price-inline");
-    if (!el){
-      el = document.createElement("div");
-      el.className = "tc-card-price-inline";
-      el.style.fontWeight = "900";
-      el.style.fontSize = "14px";
-      el.style.lineHeight = "1";
-      el.style.marginTop = "10px";
-      el.style.userSelect = "none";
-      host.appendChild(el);
-    }
+  // We want it ABOVE finance
+  const financeEl =
+    card.querySelector(".as-finance-inline") ||
+    card.querySelector('[fs-list-field="finance_monthly"]') ||
+    card.querySelector(".as-finance");
+
+  if (financeEl && financeEl.parentNode){
+    // insert right before finance
+    financeEl.parentNode.insertBefore(el, financeEl);
     return el;
   }
+
+  // Fallback: put it near the bottom/actions area
+  const host =
+    card.querySelector(".as-actions") ||
+    card.querySelector(".as-bottom") ||
+    card.querySelector(".as-footer") ||
+    card.querySelector(".as-meta-b") ||
+    card;
+
+  host.appendChild(el);
+  return el;
+}
 
   function getPriceText(card){
     // Prefer hidden fs-list-field="price" if present

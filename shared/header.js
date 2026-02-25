@@ -55,6 +55,14 @@
     nav.style.setProperty("display","none","important");
   }
 
+   // also hide any direct Home link sitting outside nav
+document.querySelectorAll('#tc-header a').forEach(a=>{
+  const txt = (a.textContent || '').trim().toLowerCase();
+  if (txt === 'home') {
+    a.style.setProperty('display','none','important');
+  }
+});
+
   // (optional) if you still see any random header link groups, nuke them:
   // document.querySelectorAll("#tc-header .tc-header-links").forEach(el=>{
   //   el.style.setProperty("display","none","important");

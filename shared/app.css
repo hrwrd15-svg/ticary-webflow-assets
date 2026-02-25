@@ -8388,3 +8388,19 @@ html[data-theme="light"] .as-cardPrice{
   width:100%;
   border-radius:0 0 18px 18px;
 }
+
+/* ===== Make price + finance flush to right edge ===== */
+
+.as-bottom{
+  padding-right: 0 !important;   /* remove right gutter */
+}
+
+.as-actions{
+  margin-right: -18px !important;  /* pull stack into card edge */
+  padding-right: 0 !important;
+}
+
+.as-pricePill,
+.as-financeWrap{
+  width: calc(100% + 18px) !important;  /* compensate for removed gutter */
+}

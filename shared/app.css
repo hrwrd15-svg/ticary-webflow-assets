@@ -8459,3 +8459,30 @@ html[data-theme="light"] .as-cardPrice{
 
 /* make sure nothing clips when we "escape" */
 .as-card{ overflow: visible !important; }
+
+/* --- FIX: dealer column getting clipped / too narrow --- */
+
+/* force the bottom row to actually span the card width */
+.as-card .as-bottom{
+  width: 100% !important;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0,1fr) auto !important; /* dealer gets remaining space */
+}
+
+/* dealer column must be allowed to shrink/ellipsis properly */
+.as-card .as-dealer{
+  min-width: 0 !important;
+}
+
+/* stop clipping the dealer text/phone */
+.as-card .as-dealerMeta,
+.as-card .as-dealerPhone{
+  overflow: visible !important;
+}
+
+/* if you want it tidy (no wrapping explosions), use ellipsis */
+.as-card .as-dealerMeta,
+.as-card .as-dealerPhone{
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

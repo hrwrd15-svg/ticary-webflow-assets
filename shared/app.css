@@ -8134,3 +8134,20 @@ body.tc-filter-panel-open{
 .tc-mnav-links a.tc-logout-btn{
   font-weight: 750;
 } */
+
+/* ================================
+   TICARY — Vehicle cards: sharp edges
+================================== */
+
+.as-card,
+.as-card *{
+  border-radius: 0 !important;
+}
+
+/* If your image wrapper had rounding */
+.as-thumb,
+.as-thumb-wrap,
+.as-image,
+.as-img{
+  border-radius: 0 !important;
+}

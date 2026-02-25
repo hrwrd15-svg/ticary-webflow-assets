@@ -8434,3 +8434,24 @@ html[data-theme="light"] .as-cardPrice{
 .as-actions{
   justify-self: end;
 }
+
+/* --- Card bottom row: make the right blocks flush to card edge --- */
+.as-bottom{
+  margin-right: -12px;   /* cancels .as-body right padding */
+  margin-bottom: -12px;  /* cancels .as-body bottom padding */
+}
+
+/* keep dealer text nicely padded (so only the right blocks go flush) */
+.as-bottom .as-dealer{
+  padding-right: 12px;
+  padding-bottom: 12px;
+}
+
+/* make sure the right stack fills its column cleanly */
+.as-bottom .as-actions{
+  align-self: stretch;
+}
+.as-bottom .as-actions > *{
+  width: 100%;
+  box-sizing: border-box;
+}

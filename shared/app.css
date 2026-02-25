@@ -8455,3 +8455,32 @@ html[data-theme="light"] .as-cardPrice{
   width: 100%;
   box-sizing: border-box;
 }
+
+/* --- Make the right action stack flush WITHOUT clipping --- */
+
+/* 1) Remove right padding from the whole card body */
+.as-body{
+  padding-right: 0 !important;
+}
+
+/* 2) Add the padding back to the content blocks that should stay inset */
+.as-titleRow,
+.as-line,
+.as-chips{
+  padding-right: 12px !important;
+}
+
+/* 3) Bottom row: keep dealer padded, actions flush */
+.as-bottom .as-dealer{
+  padding-right: 12px !important;
+}
+
+/* 4) Ensure actions stay inside and fill their column */
+.as-bottom .as-actions{
+  justify-self: end;
+  align-self: stretch;
+}
+.as-bottom .as-actions > *{
+  width: 100%;
+  box-sizing: border-box;
+}

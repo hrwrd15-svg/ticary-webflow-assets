@@ -1669,12 +1669,16 @@
   text-overflow:ellipsis;
 }
 
-/* Pills: NOT Ticary-blue background; bigger text */
 .as-chips{
-  margin-top:0;                 /* pulls pills closer to edition */
+  margin-top:0;
   display:grid;
   grid-template-columns:repeat(2, minmax(0,1fr));
   gap:10px;
+
+  /* ✅ reserve space for 2 rows even if only 1 row of chips exists */
+  grid-auto-rows: 44px;                 /* row height */
+  min-height: calc((44px * 2) + 10px);  /* 2 rows + the gap */
+  align-content: start;
 }
 
 .as-chip{

@@ -6,7 +6,8 @@ window.__asComplete = true;
   // =========================
   // CONFIG
   // =========================
-  var SNAPSHOT = 'https://raw.githubusercontent.com/hrwrd15-svg/vehicle_snapshot/main/cars.json?_=' + Date.now();
+  var SNAPSHOT_INDEX = 'https://raw.githubusercontent.com/hrwrd15-svg/vehicle_snapshot/main/cars_index.json?_=' + Date.now();
+  var SNAPSHOT_BASE  = 'https://raw.githubusercontent.com/hrwrd15-svg/vehicle_snapshot/main/';
   var API      = 'https://vehicle-api-espm.onrender.com/cars?_=' + Date.now();
   var PAGE_SIZE_BOOT = 24;
 
@@ -237,25 +238,44 @@ function isUK(lat, lng){
     return await r.text();
   }
 
+  async function loadSnapshotCarsChunked(){
+  // 1) get index
+  var idxTxt = await fetchText(SNAPSHOT_INDEX);
+  var idx;
+  try{ idx = JSON.parse(idxTxt); }catch(e){ idx = null; }
+  if (!idx || !Array.isArray(idx.files) || !idx.files.length) return null;
+
+  // 2) fetch each chunk and concat
+  var out = [];
+  for (var i=0; i<idx.files.length; i++){
+    var file = idx.files[i];
+    var url = SNAPSHOT_BASE + file + '?_=' + Date.now();
+    var txt = await fetchText(url);
+    var arr = parseJSON(txt); // parseJSON already supports arrays
+    if (arr && arr.length) out = out.concat(arr);
+  }
+
+  return out.length ? out : null;
+}
+
   async function loadCars(){
     // 1) snapshot
-    try{
-      var snapTxt = await fetchText(SNAPSHOT);
-      var snapCars = parseJSON(snapTxt);
-      if (snapCars && snapCars.length){
-        // if snapshot looks like it lacks coords, fall through to live API
-        var ok = hasCoords(snapCars[0]);
-        if (ok){
-          log('using snapshot', snapCars.length);
-          return snapCars;
-        }
-        log('snapshot missing coords → will try live API');
-      } else {
-        log('snapshot empty → will try live API');
-      }
-    }catch(e){
-      log('snapshot failed → will try live API', e && e.message);
+    // 1) snapshot (chunked)
+try{
+  var snapCars = await loadSnapshotCarsChunked();
+  if (snapCars && snapCars.length){
+    var ok = hasCoords(snapCars[0]);
+    if (ok){
+      log('using snapshot (chunked)', snapCars.length);
+      return snapCars;
     }
+    log('snapshot missing coords → will try live API');
+  } else {
+    log('snapshot empty → will try live API');
+  }
+}catch(e){
+  log('snapshot failed → will try live API', e && e.message);
+}
 
     // 2) live API fallback
     try{

@@ -814,8 +814,19 @@ window.__ticaryApply = function () {
 ).sort((a, b) => a - b);
 
 
-  const yearMin = Math.min(...items.map(x => isFinite(x.data.year) ? x.data.year : Infinity));
-  const yearMax = Math.max(...items.map(x => isFinite(x.data.year) ? x.data.year : -Infinity));
+  // Avoid Math.min(...bigArray) / spread on large datasets (can blow the call stack)
+  let yearMin = Infinity;
+  let yearMax = -Infinity;
+  for (let i = 0; i < items.length; i++){
+    const y = items[i]?.data?.year;
+    if (isFinite(y)){
+      if (y < yearMin) yearMin = y;
+      if (y > yearMax) yearMax = y;
+    }
+  }
+  // sensible fallback if years are missing
+  if (!isFinite(yearMin)) yearMin = 0;
+  if (!isFinite(yearMax)) yearMax = 0;
 
    state = {
     sort: 'price-desc',
@@ -5174,4 +5185,3 @@ if (t === 'fill' && has(id, /hillshade/i)) {
   aiBtn.addEventListener('mouseenter', e => { e.stopImmediatePropagation(); }, true);
   aiBtn.addEventListener('mouseover',  e => { e.stopImmediatePropagation(); }, true);
 })();
-

@@ -8597,11 +8597,12 @@ html[data-theme="light"] .as-cardPrice{
 }
 
 .as-fav-btn .as-heart-o{
-  fill:none;
+  fill: none;
   stroke: rgba(255,255,255,.92);
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-miterlimit: 1;
 }
 
 .as-fav-btn .as-heart-f{

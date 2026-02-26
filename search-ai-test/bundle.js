@@ -750,9 +750,18 @@ window.__ticaryApply = function () {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+
           const on = btn.getAttribute('aria-pressed') === 'true';
           const next = !on;
+
           btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+
+          // ✅ Pop animation only when turning ON
+          if (next) {
+            btn.classList.remove('as-pop');   // reset if already present
+            void btn.offsetWidth;            // force reflow so animation restarts
+            btn.classList.add('as-pop');
+          }
 
           if (next) favIDs.add(id);
           else favIDs.delete(id);
@@ -768,12 +777,7 @@ window.__ticaryApply = function () {
             if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
           }catch(e){}
         });
-
-        card.appendChild(btn);
-      });
-    }catch(e){}
-  };
-
+        
   // Finance placeholder now also runs AFTER render
   window.__ticaryFinanceFix = function(scope){
     try{

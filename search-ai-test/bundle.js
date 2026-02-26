@@ -723,60 +723,66 @@ window.__ticaryApply = function () {
   window.__ticarySaveFavs = saveFavs;
 
   window.__ticaryEnsureFavButtons = function(scope){
-    try{
-      const cards = (scope || document).querySelectorAll('.as-card');
-      cards.forEach((card) => {
-        if (card.querySelector('.as-fav-btn')) return;
+  try{
+    const cards = (scope || document).querySelectorAll('.as-card');
 
-        const url = card.dataset.url || '';
-        const vid = card.dataset.vehicleId || card.dataset.id || '';
-        const id  = url || vid;
-        if (!id) return;
+    cards.forEach((card) => {
+      if (card.querySelector('.as-fav-btn')) return;
 
-        const btn = document.createElement('button');
-        btn.className = 'as-fav-btn';
-        btn.type = 'button';
-        btn.setAttribute('aria-label', 'Favourite');
-        btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
-        btn.innerHTML = `
-          btn.innerHTML = `
-            <svg class="as-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <!-- outline -->
-              <path class="as-heart-o" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              <!-- filled -->
-              <path class="as-heart-f" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>`;
+      const url = card.dataset.url || '';
+      const vid = card.dataset.vehicleId || card.dataset.id || '';
+      const id  = url || vid;
+      if (!id) return;
 
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+      const btn = document.createElement('button');
+      btn.className = 'as-fav-btn';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Favourite');
+      btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
 
-          const on = btn.getAttribute('aria-pressed') === 'true';
-          const next = !on;
+      // ✅ One clean template string (no nested backticks)
+      btn.innerHTML = `
+        <svg class="as-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path class="as-heart-o" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          <path class="as-heart-f" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+      `;
 
-          btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-          // ✅ Pop animation only when turning ON
-          if (next) {
-            btn.classList.remove('as-pop');   // reset if already present
-            void btn.offsetWidth;            // force reflow so animation restarts
-            btn.classList.add('as-pop');
-          }
+        const on = btn.getAttribute('aria-pressed') === 'true';
+        const next = !on;
 
-          if (next) favIDs.add(id);
-          else favIDs.delete(id);
+        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
 
-          saveFavs([...favIDs]);
+        // ✅ Pop animation only when turning ON
+        if (next) {
+          btn.classList.remove('as-pop');
+          void btn.offsetWidth; // restart animation
+          btn.classList.add('as-pop');
+        }
 
-          // keep your existing optional integrations
-          if (state.favsOnly) apply();
-          if (window.updateFavsPanel) window.updateFavsPanel();
+        if (next) favIDs.add(id);
+        else favIDs.delete(id);
 
-          try{
-            const v = Number(card.dataset.vehicleId || 0) || 0;
-            if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
-          }catch(e){}
-        });
+        saveFavs([...favIDs]);
+
+        if (state && state.favsOnly) apply();
+        if (window.updateFavsPanel) window.updateFavsPanel();
+
+        try{
+          const v = Number(card.dataset.vehicleId || 0) || 0;
+          if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
+        }catch(_){}
+      });
+
+      // ✅ Actually insert the button
+      card.appendChild(btn);
+    });
+  }catch(e){}
+};
         
   // Finance placeholder now also runs AFTER render
   window.__ticaryFinanceFix = function(scope){

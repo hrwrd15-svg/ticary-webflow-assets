@@ -8555,3 +8555,83 @@ html[data-theme="light"] .as-cardPrice{
 :root[data-theme="light"] .as-thumb{
   background-color: #f1f3f5;
 }
+
+/* =========================================================
+   TICARY — Card favourites button polish
+========================================================= */
+
+.as-fav-btn{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:44px;
+  height:44px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(10,14,20,.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  z-index:5;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  box-shadow: 0 8px 22px rgba(0,0,0,.25);
+}
+
+.as-fav-btn:hover{
+  transform: translateY(-1px) scale(1.03);
+  background:rgba(10,14,20,.45);
+  border-color: rgba(255,255,255,.26);
+}
+
+.as-fav-btn:active{
+  transform: scale(.96);
+}
+
+/* icon styling */
+.as-fav-btn .as-heart{
+  width:20px;
+  height:20px;
+  display:block;
+}
+
+.as-fav-btn .as-heart-o{
+  fill:none;
+  stroke: rgba(255,255,255,.92);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.as-fav-btn .as-heart-f{
+  fill: #ff3b6a;           /* nicer than flat red */
+  opacity: 0;
+  transform-origin: 50% 60%;
+  transform: scale(.6);
+  transition: opacity .15s ease, transform .18s ease;
+}
+
+/* pressed state */
+.as-fav-btn[aria-pressed="true"]{
+  border-color: rgba(255,59,106,.45);
+  box-shadow: 0 10px 26px rgba(255,59,106,.10), 0 10px 26px rgba(0,0,0,.22);
+}
+
+.as-fav-btn[aria-pressed="true"] .as-heart-o{
+  stroke: rgba(255,255,255,.35);
+}
+
+.as-fav-btn[aria-pressed="true"] .as-heart-f{
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* little “pop” when toggled on */
+.as-fav-btn.as-pop{
+  animation: asFavPop .22s ease-out;
+}
+@keyframes asFavPop{
+  0%{ transform: scale(1); }
+  50%{ transform: scale(1.12); }
+  100%{ transform: scale(1); }
+}

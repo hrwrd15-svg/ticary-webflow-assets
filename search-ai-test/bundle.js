@@ -739,9 +739,13 @@ window.__ticaryApply = function () {
         btn.setAttribute('aria-label', 'Favourite');
         btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
         btn.innerHTML = `
-          <svg viewBox="0 0 24 24">
-            <path d="M12.1 21.35c-.13 .09-.3 .09-.43 0C7.14 17.77 4 15.03 2.53 12.7 1.4 10.93 1.2 8.9 2.13 7.18 3.03 5.51 4.77 4.5 6.6 4.5c1.54 0 3.02.74 3.9 1.93.88-1.19 2.36-1.93 3.9-1.93 1.83 0 3.57 1.01 4.47 2.68.93 1.72.73 3.75-.4 5.52-1.47 2.33-4.61 5.07-9.37 8.65z"/>
-          </svg>`;
+          btn.innerHTML = `
+            <svg class="as-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <!-- outline -->
+              <path class="as-heart-o" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <!-- filled -->
+              <path class="as-heart-f" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>`;
 
         btn.addEventListener('click', (e) => {
           e.preventDefault();

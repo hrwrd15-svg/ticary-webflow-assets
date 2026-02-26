@@ -8486,3 +8486,68 @@ html[data-theme="light"] .as-cardPrice{
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* =========================================================
+   TICARY — Vehicle card thumbnails (blur-fill letterbox)
+   - Top layer: contain (no lateral cropping)
+   - Background: same image, cover + blur for continuity
+   Paste at END of app.css so it wins.
+========================================================= */
+
+.as-thumb{
+  position: relative;
+  overflow: hidden;
+
+  /* keep your slot sizing */
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/12;
+
+  /* IMPORTANT: keep background-image coming from inline style */
+  background-position: center center;
+  background-repeat: no-repeat;
+
+  /* base layer won't really be seen (blur layer covers it), but keep safe defaults */
+  background-size: cover;
+  background-color: var(--as-thumb-bg, #0f1418);
+}
+
+/* blurred continuity layer */
+.as-thumb::before{
+  content: "";
+  position: absolute;
+  inset: -24px;                 /* bleed so blur doesn’t show edges */
+  background-image: inherit;    /* uses the same inline background-image */
+  background-position: inherit;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(26px);
+  transform: scale(1.15);
+  opacity: 0.95;
+}
+
+/* crisp image layer (no cropping) */
+.as-thumb::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: inherit;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: contain;     /* KEY: never crop sides */
+}
+
+/* If you ever use an <img> inside .as-thumb somewhere, keep it above the blur */
+.as-thumb img{
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain !important;
+}
+
+/* Light theme fallback (only used if an image fails to load) */
+:root[data-theme="light"] .as-thumb{
+  background-color: #f1f3f5;
+}

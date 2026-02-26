@@ -8600,6 +8600,7 @@ html[data-theme="light"] .as-cardPrice{
   fill:none;
   stroke: rgba(255,255,255,.92);
   stroke-width: 2;
+  stroke-linecap: round;
   stroke-linejoin: round;
 }
 

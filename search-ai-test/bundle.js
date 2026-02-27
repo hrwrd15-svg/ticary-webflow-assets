@@ -818,7 +818,7 @@ window.__ticaryApply = function () {
         if (next) favIDs.add(id);
         else favIDs.delete(id);
 
-        saveFavs([...favIDs]);
+    
 
         if (state && state.favsOnly) apply();
         if (window.updateFavsPanel) window.updateFavsPanel();
@@ -4066,15 +4066,7 @@ if (t === 'fill' && has(id, /hillshade/i)) {
   const API = "https://vehicle-api-espm.onrender.com";
   const FAV_KEY = "as:favs";
 
-  const loadFavs = () => {
-    try { return JSON.parse(localStorage.getItem(FAV_KEY) || "[]"); }
-    catch { return []; }
-  };
-
-  const saveFavs = (ids) => {
-    try { localStorage.setItem(FAV_KEY, JSON.stringify(ids)); }
-    catch {}
-  };
+ 
 
   async function getToken(){
     try{
@@ -4137,7 +4129,7 @@ if (t === 'fill' && has(id, /hillshade/i)) {
       if (!serverIds.length) return;
 
       const cards = document.querySelectorAll(".as-card");
-      const urlSet = new Set(loadFavs());
+    
 
       cards.forEach(card => {
         const vid = Number(card.dataset.vehicleId || 0);
@@ -4146,10 +4138,7 @@ if (t === 'fill' && has(id, /hillshade/i)) {
         if (serverIds.includes(vid)){
           const btn = card.querySelector(".as-fav-btn");
           if (btn) btn.setAttribute("aria-pressed", "true");
-
-          if (card.dataset.url){
-            urlSet.add(card.dataset.url);
-          }
+            
         }
       });
 
@@ -4263,13 +4252,6 @@ if (t === 'fill' && has(id, /hillshade/i)) {
     }
   }
 
-  // ---------- COUNT (ONLY TRUST as:favs + drawer DOM) ----------
-  function getLocalCount(){
-    try{
-      const a = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
-      return Array.isArray(a) ? a.length : 0;
-    }catch(e){ return 0; }
-  }
 
   function paintCount(){
     // if drawer has rendered, trust it

@@ -1,3 +1,7 @@
+window.__asInit_v5 = true;
+window.__asInit_v6 = true;
+window.__asComplete = true;
+
 (function(){
   // =========================
   // CONFIG
@@ -71,26 +75,7 @@ function isUK(lat, lng){
   return { lat:String(lat||''), lng:String(lng||'') };
 }
 
-window.addEventListener('error', (e) => {
-  try { console.warn('[ticary] global error:', e && e.message ? e.message : e); } catch(_) {}
-});
 
-window.addEventListener('unhandledrejection', (e) => {
-  try { console.warn('[ticary] unhandled rejection:', e && e.reason ? e.reason : e); } catch(_) {}
-});
-
-    function requestPartBApply(){
-    if (window.__ticaryApplyQueued) return;
-    window.__ticaryApplyQueued = true;
-
-    setTimeout(function(){
-      window.__ticaryApplyQueued = false;
-      try{
-        if (typeof window.__ticaryApply === 'function') window.__ticaryApply();
-      }catch(e){}
-    }, 0);
-  }
-  
   // =========================
   // CARD RENDERER (Part B calls this)
   // =========================
@@ -188,6 +173,7 @@ window.addEventListener('unhandledrejection', (e) => {
   +     ' data-url="'+safe(href)+'">'
 
   +     '<a class="as-media as-link" href="'+safe(href)+'" target="_blank" rel="noopener">'
+  +       '<span class="as-price-badge">'+safe(money(c.price_gbp))+'</span>'
   +       '<span class="as-thumb" aria-hidden="true" style="'+(img ? ('background-image:url('+String(img).replace(/"/g,'%22')+');') : '')+'"></span>'
   +     '</a>'
 
@@ -215,7 +201,7 @@ window.addEventListener('unhandledrejection', (e) => {
   +         '</div>'
 
   +         '<div class="as-actions">'
-  +         '<div class="as-cta as-pricePill" data-open="1" role="button" tabindex="0">'+safe(money(c.price_gbp))+'</div>'
+  +           '<a class="as-cta as-view" href="'+safe(href)+'" target="_blank" rel="noopener">View details</a>'
   +           '<div class="as-financeWrap" aria-label="Finance">'
   +             '<div class="as-financeLabel">Finance</div>'
   +             '<span class="as-finance-inline" fs-list-field="finance_monthly" style="display:none;"></span>'
@@ -254,43 +240,42 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 
   async function loadSnapshotCarsChunked(){
-  // 1) get index
-  var idxTxt = await fetchText(SNAPSHOT_INDEX);
-  var idx;
-  try{ idx = JSON.parse(idxTxt); }catch(e){ idx = null; }
-  if (!idx || !Array.isArray(idx.files) || !idx.files.length) return null;
+    // cars_index.json format:
+    // { "files": ["cars_000.json", "cars_001.json", ...], "total": 160123 }
+    var idxTxt = await fetchText(SNAPSHOT_INDEX);
+    var idx;
+    try{ idx = JSON.parse(idxTxt); }catch(e){ idx = null; }
+    if (!idx || !Array.isArray(idx.files) || !idx.files.length) return null;
 
-  // 2) fetch each chunk and concat
-  var out = [];
-  for (var i=0; i<idx.files.length; i++){
-    var file = idx.files[i];
-    var url = SNAPSHOT_BASE + file + '?_=' + Date.now();
-    var txt = await fetchText(url);
-    var arr = parseJSON(txt); // parseJSON already supports arrays
-    if (arr && arr.length) out = out.concat(arr);
+    var out = [];
+    for (var i=0; i<idx.files.length; i++){
+      var file = idx.files[i];
+      var url = SNAPSHOT_BASE + file + '?_=' + Date.now();
+      var txt = await fetchText(url);
+      var arr = parseJSON(txt); // parseJSON supports arrays and {cars:[]}
+      if (arr && arr.length) out = out.concat(arr);
+    }
+    return out.length ? out : null;
   }
-
-  return out.length ? out : null;
-}
 
   async function loadCars(){
-    // 1) snapshot
-    // 1) snapshot (chunked)
-try{
-  var snapCars = await loadSnapshotCarsChunked();
-  if (snapCars && snapCars.length){
-    var ok = hasCoords(snapCars[0]);
-    if (ok){
-      log('using snapshot (chunked)', snapCars.length);
-      return snapCars;
+    // 1) snapshot (chunked: avoids GitHub 100MB limit)
+    try{
+      var snapCars = await loadSnapshotCarsChunked();
+      if (snapCars && snapCars.length){
+        // if snapshot looks like it lacks coords, fall through to live API
+        var ok = hasCoords(snapCars[0]);
+        if (ok){
+          log('using snapshot (chunked)', snapCars.length);
+          return snapCars;
+        }
+        log('snapshot missing coords → will try live API');
+      } else {
+        log('snapshot empty → will try live API');
+      }
+    }catch(e){
+      log('snapshot failed → will try live API', e && e.message);
     }
-    log('snapshot missing coords → will try live API');
-  } else {
-    log('snapshot empty → will try live API');
-  }
-}catch(e){
-  log('snapshot failed → will try live API', e && e.message);
-}
 
     // 2) live API fallback
     try{
@@ -386,18 +371,25 @@ window.__ticaryCars = Array.isArray(cars)
 
   renderInitial(listInner, window.__ticaryCars);
 
-  requestPartBApply();
+  try{
+    if (typeof window.__ticaryApply === 'function') window.__ticaryApply();
+  }catch(e){}
 
   log('✅ cars ready:', (window.__ticaryCars||[]).length);
 
         // Signal to Part B (and anything else) that cars are now available
   try { window.dispatchEvent(new Event('ticary:cars-ready')); } catch(e){}
-      
+
+  // Race-proof: if Part B defines __ticaryApply slightly later, call again
+  setTimeout(function(){
+    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
+  }, 0);
+  setTimeout(function(){
+    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
+  }, 250);
 });
 
   }
-
-  window.__ticaryBootPartA = boot;
 
   if (document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', function(){ boot(0); });
@@ -406,28 +398,26 @@ window.__ticaryCars = Array.isArray(cars)
   }
 })();
 
-  // Facet option renderer (ES5-safe)
+// Facet option renderer (kept separate to avoid Webflow 50k embed limit)
   window.setFacetOptions = function(selectEl, facetArr, selectedValue, total, emptyLabel){
     if (!selectEl) return;
 
     selectEl.innerHTML = '';
     selectEl.appendChild(new Option(emptyLabel || 'Any', ''));
 
-    facetArr = facetArr || [];
-    for (var i = 0; i < facetArr.length; i++){
-      var row = facetArr[i] || {};
-      var v = row.value;
-      if (!v) continue;
+    (facetArr || []).forEach(row => {
+      const v = row.value;
+      if (!v) return;
 
-      var n = Number(row.count || 0);
+      const n = Number(row.count || 0);
 
-    // If option is currently selected, show CURRENT TOTAL
-      var labelCount = (selectedValue && v === selectedValue) ? Number(total || 0) : n;
+      // If option is currently selected, show CURRENT TOTAL
+      const labelCount = (selectedValue && v === selectedValue) ? Number(total || 0) : n;
 
-      var label = String(v) + ' (' + labelCount.toLocaleString('en-GB') + ')';
-      selectEl.appendChild(new Option(label, v));
-    }
-  };
+      selectEl.appendChild(
+        new Option(`${v} (${labelCount.toLocaleString('en-GB')})`, v)
+      );
+    });
   };
 
 (function () {
@@ -625,40 +615,16 @@ const listInner =
   window.__ticaryPartB = 'starting';
   listInner.setAttribute('data-as-grid', '1');
 
-// ✅ Wait for data before proceeding (event-based, race-proof)
-// Wait until:
-// 1) cars exist
-// 2) at least 1 card has rendered
-if (
-  !Array.isArray(window.__ticaryCars) ||
-  window.__ticaryCars.length === 0 ||
-  !document.querySelector('.as-card')
-) {
-  if (tries < 60) return setTimeout(() => bootPartB(tries + 1), 120);
-  console.warn('Part B waiting on DOM + cars');
-  return;
-}
-  if (!window.__ticaryWaitCarsBound) {
-    window.__ticaryWaitCarsBound = true;
-
-    // When Part A signals cars are ready, restart Part B cleanly
-    window.addEventListener('ticary:cars-ready', () => {
-      try { bootPartB(0); } catch (e) { console.error('❌ bootPartB retry failed', e); }
-    }, { once: true });
-  }
-
-  // Also do a light fallback retry (in case the event was missed)
-  if (tries < 20) return setTimeout(() => bootPartB(tries + 1), 150);
-  console.warn('⏳ waiting for cars…');
+// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
+if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
+  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
+  console.error('❌ window.__ticaryCars never became available');
   return;
 }
 
     // ✅ Build from full dataset in memory (NOT from DOM)
-  const rawCarsAll = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
-  window.__ticaryCarsAll = rawCarsAll;
-
-  // ✅ DO NOT SLICE HERE
-  const items = rawCarsAll.map((car) => {
+  const rawCars = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
+  const items = rawCars.map((car) => {
     car = car || {};
 
     // ✅ Compatibility aliases for older map/popup code (Part C)
@@ -737,22 +703,12 @@ if (
   // ✅ EXPOSE EARLY 
 window.__ticaryItems = items;
 window.__ticaryApply = function () {
-
-  if (window.__ticaryApplyRunning) return;
-  window.__ticaryApplyRunning = true;
-
-  if (!state) {
-    window.__ticaryApplyRunning = false;
-    return setTimeout(window.__ticaryApply, 50);
-  }
-
   try {
+    if (!state) return setTimeout(window.__ticaryApply, 50);
     apply();
   } catch (e) {
     console.error('❌ Part B apply() crashed', e);
   }
-
-  window.__ticaryApplyRunning = false;
 };
 
 
@@ -767,71 +723,53 @@ window.__ticaryApply = function () {
   window.__ticarySaveFavs = saveFavs;
 
   window.__ticaryEnsureFavButtons = function(scope){
-  try{
-    const cards = (scope || document).querySelectorAll('.as-card');
+    try{
+      const cards = (scope || document).querySelectorAll('.as-card');
+      cards.forEach((card) => {
+        if (card.querySelector('.as-fav-btn')) return;
 
-    cards.forEach((card) => {
-      if (card.querySelector('.as-fav-btn')) return;
+        const url = card.dataset.url || '';
+        const vid = card.dataset.vehicleId || card.dataset.id || '';
+        const id  = url || vid;
+        if (!id) return;
 
-      const url = card.dataset.url || '';
-      const vid = card.dataset.vehicleId || card.dataset.id || '';
-      const id  = url || vid;
-      if (!id) return;
+        const btn = document.createElement('button');
+        btn.className = 'as-fav-btn';
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Favourite');
+        btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <path d="M12.1 21.35c-.13 .09-.3 .09-.43 0C7.14 17.77 4 15.03 2.53 12.7 1.4 10.93 1.2 8.9 2.13 7.18 3.03 5.51 4.77 4.5 6.6 4.5c1.54 0 3.02.74 3.9 1.93.88-1.19 2.36-1.93 3.9-1.93 1.83 0 3.57 1.01 4.47 2.68.93 1.72.73 3.75-.4 5.52-1.47 2.33-4.61 5.07-9.37 8.65z"/>
+          </svg>`;
 
-      const btn = document.createElement('button');
-      btn.className = 'as-fav-btn';
-      btn.type = 'button';
-      btn.setAttribute('aria-label', 'Favourite');
-      btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const on = btn.getAttribute('aria-pressed') === 'true';
+          const next = !on;
+          btn.setAttribute('aria-pressed', next ? 'true' : 'false');
 
-      // ✅ One clean template string (no nested backticks)
-      btn.innerHTML = `
-        <svg class="as-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <!-- outline -->
-          <path class="as-heart-o"
-            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          <!-- filled -->
-          <path class="as-heart-f"
-            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-      `;
+          if (next) favIDs.add(id);
+          else favIDs.delete(id);
 
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+          saveFavs([...favIDs]);
 
-        const on = btn.getAttribute('aria-pressed') === 'true';
-        const next = !on;
+          // keep your existing optional integrations
+          if (state.favsOnly) apply();
+          if (window.updateFavsPanel) window.updateFavsPanel();
 
-        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+          try{
+            const v = Number(card.dataset.vehicleId || 0) || 0;
+            if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
+          }catch(e){}
+        });
 
-        // ✅ Pop animation only when turning ON
-        if (next) {
-          btn.classList.remove('as-pop');
-          void btn.offsetWidth; // restart animation
-          btn.classList.add('as-pop');
-        }
-
-        if (next) favIDs.add(id);
-        else favIDs.delete(id);
-
-        saveFavs([...favIDs]);
-
-        if (state && state.favsOnly) apply();
-        if (window.updateFavsPanel) window.updateFavsPanel();
-
-        try{
-          const v = Number(card.dataset.vehicleId || 0) || 0;
-          if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
-        }catch(_){}
+        card.appendChild(btn);
       });
+    }catch(e){}
+  };
 
-      // ✅ Actually insert the button
-      card.appendChild(btn);
-    });
-  }catch(e){}
-};
-        
   // Finance placeholder now also runs AFTER render
   window.__ticaryFinanceFix = function(scope){
     try{
@@ -849,179 +787,35 @@ window.__ticaryApply = function () {
   };
 
 
-  // GLOBAL LISTS FILTERS (FAST BOOT + BACKGROUND FULL BUILD)
+  // GLOBAL LISTS FILTERS
+  const allMakes     = uniqueSorted(items.map(x => x.data.make));
+  const modelsByMake = {};
 
-function setSelectOptions(sel, values, placeholder){
-  if (!sel) return;
-  const cur = sel.value;
-  const opts = [`<option value="">${placeholder}</option>`]
-    .concat(values.map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${String(v)}</option>`));
-  sel.innerHTML = opts.join('');
-  // try to keep selection
-  if (cur) sel.value = cur;
-}
+  items.forEach(({ data }) => {
+    if (data.make)  (modelsByMake[data.make]  ||= new Set()).add(data.model);
+  });
 
-function computeListsFromCars(cars){
-  const makes = new Set();
-  const fuels = new Set();
-  const gear = new Set();
-  const bodies = new Set();
-  const cols = new Set();
-  const engines = new Set();
+  Object.keys(modelsByMake).forEach(m => modelsByMake[m] = uniqueSorted([...modelsByMake[m]]));
 
-  let yMin = Infinity, yMax = -Infinity;
+  const fuels     = uniqueSorted(items.map(x => x.data.fuel));
+  const gearboxes = uniqueSorted(items.map(x => x.data.gearbox));
+  const bodytypes = uniqueSorted(items.map(x => x.data.bodytype)).filter(Boolean);
+  const colours   = uniqueSorted(items.map(x => x.data.color)).filter(Boolean);
+  const engines = Array.from(
+  new Set(
+    items
+      .map(x => x.data.engine)
+      .filter(v => {
+        const n = num(v);
+        return isFinite(n) && n > 0;
+      })
+      .map(v => Math.round(num(v) * 10) / 10)
+  )
+).sort((a, b) => a - b);
 
-  for (let i=0; i<cars.length; i++){
-    const c = cars[i] || {};
 
-    const make = c.make || c.data?.make;
-    const model = c.model || c.data?.model; // model used later in modelsByMake
-    const fuel  = c.fuel_type || c.fuel || c.data?.fuel;
-    const gb    = c.transmission || c.gearbox || c.data?.gearbox;
-    const body  = c.body_type || c.bodytype || c.data?.bodytype;
-    const col   = c.color || c.colour || c.data?.color;
-    const eng   = c.engine_size_l || c.engine || c.data?.engine;
-    const year  = c.year || c.data?.year;
-
-    if (make) makes.add(make);
-    if (fuel) fuels.add(fuel);
-    if (gb)   gear.add(gb);
-    if (body) bodies.add(body);
-    if (col)  cols.add(col);
-
-    const en = num(eng);
-    if (isFinite(en) && en > 0) engines.add(Math.round(en * 10) / 10);
-
-    const y = num(year);
-    if (isFinite(y)){
-      if (y < yMin) yMin = y;
-      if (y > yMax) yMax = y;
-    }
-  }
-
-  return {
-    makes: uniqueSorted([...makes]),
-    fuels: uniqueSorted([...fuels]),
-    gearboxes: uniqueSorted([...gear]),
-    bodytypes: uniqueSorted([...bodies]).filter(Boolean),
-    colours: uniqueSorted([...cols]).filter(Boolean),
-    engines: [...engines].sort((a,b)=>a-b),
-    yearMin: isFinite(yMin) ? yMin : 0,
-    yearMax: isFinite(yMax) ? yMax : 0,
-  };
-}
-
-// 1) fast boot lists from the 6k slice you already mapped into `items`
-const bootLists = computeListsFromCars(rawCars);
-
-// expose boot lists (so buildFiltersUI can use them immediately)
-const allMakes = bootLists.makes;
-const modelsByMake = {}; // filled below (boot slice)
-rawCars.forEach((c) => {
-  const make = c?.make;
-  const model = c?.model;
-  if (make && model) (modelsByMake[make] ||= new Set()).add(model);
-});
-Object.keys(modelsByMake).forEach(m => modelsByMake[m] = uniqueSorted([...modelsByMake[m]]));
-
-const fuels     = bootLists.fuels;
-const gearboxes = bootLists.gearboxes;
-const bodytypes = bootLists.bodytypes;
-const colours   = bootLists.colours;
-const engines   = bootLists.engines;
-
-// Avoid spread/min/max on huge arrays
-let yearMin = bootLists.yearMin;
-let yearMax = bootLists.yearMax;
-
-// 2) background “full dataset” rebuild (non-blocking)
-if (!window.__ticaryFullListsBuilding){
-  window.__ticaryFullListsBuilding = true;
-
-  const all = window.__ticaryCarsAll || [];
-  const CHUNK = 8000;
-
-  // incremental sets so we don't lock up the main thread
-  const makesS = new Set(allMakes);
-  const fuelsS = new Set(fuels);
-  const gearS  = new Set(gearboxes);
-  const bodyS  = new Set(bodytypes);
-  const colS   = new Set(colours);
-  const engS   = new Set(engines);
-
-  let yMin2 = yearMin, yMax2 = yearMax;
-
-  // model map needs sets
-  const modelsMap = {};
-  Object.keys(modelsByMake).forEach(m => modelsMap[m] = new Set(modelsByMake[m]));
-
-  let idx = 0;
-
-  function step(){
-    const end = Math.min(idx + CHUNK, all.length);
-    for (; idx < end; idx++){
-      const c = all[idx] || {};
-
-      if (c.make) makesS.add(c.make);
-      if (c.fuel_type) fuelsS.add(c.fuel_type);
-      if (c.transmission) gearS.add(c.transmission);
-      if (c.body_type) bodyS.add(c.body_type);
-      if (c.color) colS.add(c.color);
-
-      if (c.make && c.model) (modelsMap[c.make] ||= new Set()).add(c.model);
-
-      const en = num(c.engine_size_l);
-      if (isFinite(en) && en > 0) engS.add(Math.round(en * 10) / 10);
-
-      const y = num(c.year);
-      if (isFinite(y)){
-        if (!isFinite(yMin2) || y < yMin2) yMin2 = y;
-        if (!isFinite(yMax2) || y > yMax2) yMax2 = y;
-      }
-    }
-
-    if (idx < all.length){
-      setTimeout(step, 0); // yield back to UI
-      return;
-    }
-
-    // finished: replace globals + update the selects if they exist
-    const makesFinal = uniqueSorted([...makesS]);
-    const fuelsFinal = uniqueSorted([...fuelsS]);
-    const gearFinal  = uniqueSorted([...gearS]);
-    const bodyFinal  = uniqueSorted([...bodyS]).filter(Boolean);
-    const colFinal   = uniqueSorted([...colS]).filter(Boolean);
-    const engFinal   = [...engS].sort((a,b)=>a-b);
-
-    // overwrite the existing arrays in-place if possible
-    allMakes.splice(0, allMakes.length, ...makesFinal);
-    fuels.splice(0, fuels.length, ...fuelsFinal);
-    gearboxes.splice(0, gearboxes.length, ...gearFinal);
-    bodytypes.splice(0, bodytypes.length, ...bodyFinal);
-    colours.splice(0, colours.length, ...colFinal);
-    engines.splice(0, engines.length, ...engFinal);
-    yearMin = isFinite(yMin2) ? yMin2 : yearMin;
-    yearMax = isFinite(yMax2) ? yMax2 : yearMax;
-
-    Object.keys(modelsMap).forEach(m => {
-      modelsByMake[m] = uniqueSorted([...modelsMap[m]]);
-    });
-
-    // If UI already built, refresh dropdowns (no rerender)
-    try{
-      setSelectOptions(document.getElementById('asf-make'), allMakes, 'Any make');
-      setSelectOptions(document.getElementById('asf-fuel'), fuels, 'Any fuel');
-      setSelectOptions(document.getElementById('asf-gearbox'), gearboxes, 'Any gearbox');
-      setSelectOptions(document.getElementById('asf-bodytype'), bodytypes, 'Any body type');
-      setSelectOptions(document.getElementById('asf-colour'), colours, 'Any colour');
-    }catch(e){}
-
-    window.__ticaryFullListsReady = true;
-    console.log('[ticary] ✅ full filter lists ready');
-  }
-
-  setTimeout(step, 0);
-}
+  const yearMin = Math.min(...items.map(x => isFinite(x.data.year) ? x.data.year : Infinity));
+  const yearMax = Math.max(...items.map(x => isFinite(x.data.year) ? x.data.year : -Infinity));
 
    state = {
     sort: 'price-desc',
@@ -1152,7 +946,7 @@ if (!window.__ticaryFullListsBuilding){
               </div>
             </div>
           </div>
-        `, true)}
+        `, false)}
 
         ${sec('asf-year', 'Year', `
           <div class="grid-2">
@@ -2659,10 +2453,11 @@ if (!window.__ticaryFullListsBuilding){
 
   // Hook into Part B lifecycle: after apply() runs, update counts
   function hookApply(){
+    // If Part B exposes __ticaryApply, wrap it once
     if (typeof window.__ticaryApply === 'function' && !window.__ticaryApply.__countsWrapped) {
-      var orig = window.__ticaryApply;
+      const orig = window.__ticaryApply;
       function wrapped(){
-        var r = orig.apply(this, arguments);
+        const r = orig.apply(this, arguments);
         requestUpdate();
         return r;
       }
@@ -2673,22 +2468,20 @@ if (!window.__ticaryFullListsBuilding){
 
   // Add listeners to filter controls (so counts refresh even before apply, but will settle after apply too)
   function bindUI(){
-    var host = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
-    var ids = [
+    const host = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
+    const ids = [
       '#asf-make','#asf-model','#asf-trim','#asf-engine-min','#asf-engine-max',
       '#asf-fuel','#asf-gear','#asf-bodytype','#asf-colour',
       '#asf-price-min','#asf-price-max','#asf-fin-min','#asf-fin-max','#asf-mileage-max',
       '#asf-year-min','#asf-year-max'
     ];
-  
-    for (var i=0;i<ids.length;i++){
-      var sel = ids[i];
-      var el = host.querySelector(sel);
-      if (!el || el.__countsBound) continue;
+    ids.forEach(sel => {
+      const el = host.querySelector(sel);
+      if (!el || el.__countsBound) return;
       el.__countsBound = true;
       el.addEventListener('change', requestUpdate);
       el.addEventListener('input', requestUpdate);
-    }
+    });
   }
 
   // Boot loop: wait until Part B dataset/state exist
@@ -2696,31 +2489,25 @@ if (!window.__ticaryFullListsBuilding){
     tries = tries || 0;
 
     if (!Array.isArray(window.__ticaryItems) || !window.__ticaryItems.length) {
-      if (tries < 120) return setTimeout(function(){ boot(tries+1); }, 100);
+      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
+      return;
+    }
+    if (!(window.__ticaryState || window.state) || !(getState()?.filters)) {
+      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
       return;
     }
 
-    // replace getState()?.filters with a safe check
-    var st = (window.__ticaryState || window.state);
-    var hasFilters = false;
-    try { hasFilters = !!(st && st.filters); } catch(e) { hasFilters = false; }
-
-    if (!hasFilters) {
-      if (tries < 120) return setTimeout(function(){ boot(tries+1); }, 100);
-      return;
-    }
-  
     hookApply();
     bindUI();
     requestUpdate();
 
-    setInterval(function(){
+    // Also re-bind occasionally (filters UI may rebuild)
+    setInterval(() => {
       hookApply();
       bindUI();
     }, 1500);
 
   })(0);
-  
 
 })();
 
@@ -5386,56 +5173,4 @@ if (t === 'fill' && has(id, /hillshade/i)) {
 
   aiBtn.addEventListener('mouseenter', e => { e.stopImmediatePropagation(); }, true);
   aiBtn.addEventListener('mouseover',  e => { e.stopImmediatePropagation(); }, true);
-})();
-
-(function tcLoadSupervisor(){
-  if (window.__tcLoadSupervisor) return;
-  window.__tcLoadSupervisor = true;
-
-  function cardsCount(){
-    return document.querySelectorAll('.as-card').length;
-  }
-
-  function hasToolbar(){
-    return !!document.querySelector('.as-listbar-new');
-  }
-
-  function hasFiltersUI(){
-    return !!document.querySelector('#as-filters .asf, #as-filters-body .asf');
-  }
-
-  function retry(){
-    // If Part A exists and we have no cars/cards, re-run Part A
-    if (typeof window.__ticaryBootPartA === 'function') {
-      try { window.__ticaryBootPartA(0); } catch(e) {}
-    }
-
-    // If Part B apply exists, poke it (safe even if it delays)
-    if (typeof window.__ticaryApply === 'function') {
-      try { window.__ticaryApply(); } catch(e) {}
-    }
-  }
-
-  function check(label){
-    const ok =
-      (Array.isArray(window.__ticaryCars) && window.__ticaryCars.length > 0) &&
-      cardsCount() >= 8 &&
-      hasToolbar() &&
-      hasFiltersUI();
-
-    if (!ok) {
-      console.warn('[ticary] supervisor retry:', label, {
-        cars: Array.isArray(window.__ticaryCars) ? window.__ticaryCars.length : null,
-        cards: cardsCount(),
-        toolbar: hasToolbar(),
-        filters: hasFiltersUI()
-      });
-      retry();
-    }
-  }
-
-  // A few checks spaced out to catch Webflow + slow assets
-  setTimeout(() => check('t+800ms'), 800);
-  setTimeout(() => check('t+2000ms'), 2000);
-  setTimeout(() => check('t+5000ms'), 5000);
 })();

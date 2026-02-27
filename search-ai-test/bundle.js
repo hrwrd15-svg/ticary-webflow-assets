@@ -4153,7 +4153,11 @@ if (t === 'fill' && has(id, /hillshade/i)) {
         }
       });
 
-     
+      saveFavs([...urlSet]);
+      if (typeof window.tcRefreshFavDrawer === "function") window.tcRefreshFavDrawer();
+      if (document.querySelector(".th-header")){
+        if (typeof window.updateFavsPanel === "function") window.updateFavsPanel();
+      }
     }catch(e){}
   }
 

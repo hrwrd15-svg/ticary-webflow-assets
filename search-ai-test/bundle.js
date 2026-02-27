@@ -616,9 +616,22 @@ const listInner =
   listInner.setAttribute('data-as-grid', '1');
 
 // ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
+// Use event-based wakeup + longer fallback wait (chunked snapshots can take >8s)
 if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
-  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
-  console.error('❌ window.__ticaryCars never became available');
+
+  // Bind once: when Part A finishes cars load, retry Part B immediately
+  if (!window.__ticaryWaitCarsBound) {
+    window.__ticaryWaitCarsBound = true;
+
+    window.addEventListener('ticary:cars-ready', function () {
+      try { bootPartB(0); } catch (e) {}
+    }, { once: true });
+  }
+
+  // Fallback: keep waiting longer (up to ~60s)
+  if (tries < 300) return setTimeout(function(){ bootPartB(tries + 1); }, 200);
+
+  console.error('❌ window.__ticaryCars never became available (timed out after ~60s)');
   return;
 }
 

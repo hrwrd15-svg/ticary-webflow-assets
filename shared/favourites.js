@@ -683,10 +683,19 @@
 
     // 1) Add any URL whose meta.vehicle_id is in serverIDs
     const idSet = new Set(serverIDs.map(Number));
+
     for (const [url, meta] of Object.entries(favMap)){
       const vid = Number(meta?.vehicle_id || meta?.vehicleId || 0);
-      if (!vid) continue;
-      if (idSet.has(vid)) nextUrls.push(clean(url));
+
+      // if we cannot resolve vid yet → KEEP IT (prevents flicker)
+      if (!vid){
+        nextUrls.push(clean(url));
+        continue;
+      }
+
+      if (idSet.has(vid)){
+        nextUrls.push(clean(url));
+      }
     }
 
     // 2) Also keep existing URLs that have no meta yet (unknown vid)
@@ -709,9 +718,20 @@
   window.tcReconcileFavs = safeReconcile;
 
   // Run a couple times on load (sessions + caches can arrive late)
-  setTimeout(safeReconcile, 150);
-  setTimeout(safeReconcile, 900);
+  function waitForDatasetAndReconcile(n){
+    if (Array.isArray(window.__ticaryItems) && window.__ticaryItems.length){
+      safeReconcile();
+      return;
+    }
+    if (n > 200){
+      safeReconcile();
+      return;
+    }
+    setTimeout(()=>waitForDatasetAndReconcile(n+1), 50);
+  }
 
+  waitForDatasetAndReconcile(0);
+ 
   // Also when auth confirms
   try{
     window.sb?.auth?.onAuthStateChange?.((ev)=>{

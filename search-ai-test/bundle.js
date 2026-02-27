@@ -832,8 +832,16 @@ window.__ticaryApply = function () {
 ).sort((a, b) => a - b);
 
 
-  const yearMin = Math.min(...items.map(x => isFinite(x.data.year) ? x.data.year : Infinity));
-  const yearMax = Math.max(...items.map(x => isFinite(x.data.year) ? x.data.year : -Infinity));
+  // Avoid Math.min(...bigArray) which can blow the call stack on large snapshots
+  let yearMin = Infinity;
+  let yearMax = -Infinity;
+  for (let i = 0; i < items.length; i++) {
+    const y = items[i] && items[i].data ? items[i].data.year : null;
+    if (isFinite(y)) {
+      if (y < yearMin) yearMin = y;
+      if (y > yearMax) yearMax = y;
+    }
+  }
 
    state = {
     sort: 'price-desc',

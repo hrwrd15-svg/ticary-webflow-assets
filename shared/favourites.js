@@ -378,37 +378,62 @@
 
   // Normalise favourites -> URLs where possible (using full dataset)
   function normaliseFavsToUrls(){
-    const raw = loadFavs().map(clean).filter(Boolean);
-    if (!raw.length) return [];
+  const raw = loadFavs().map(clean).filter(Boolean);
+  if (!raw.length) return [];
 
-    const { byUrl, byId } = buildMaps();
+  const { byUrl, byId } = buildMaps();
+  const favMap = loadJSON(MAP_KEY, {});
+  const out = [];
+  const seen = new Set();
 
-    const out = [];
-    const seen = new Set();
+  for (const x of raw){
 
-    for (const x of raw){
-      // already a URL
-      if (/^https?:\/\//i.test(x)){
-        if (!seen.has(x)){ seen.add(x); out.push(x); }
-        continue;
+    // 1) Already a URL
+    if (/^https?:\/\//i.test(x)){
+      if (!seen.has(x)){
+        seen.add(x);
+        out.push(x);
       }
-
-      // numeric id -> resolve to url
-      if (isNum(x)){
-        const it = byId.get(String(parseInt(x,10)));
-        const url = clean(it?.data?.url);
-        if (url && !seen.has(url)){ seen.add(url); out.push(url); }
-        continue;
-      }
-
-      // unknown string (could be old-style id); try match byId anyway
-      const it = byId.get(x);
-      const url = clean(it?.data?.url);
-      if (url && !seen.has(url)){ seen.add(url); out.push(url); }
+      continue;
     }
 
-    return out;
+    // 2) Numeric ID
+    if (isNum(x)){
+      const idStr = String(parseInt(x,10));
+
+      // Try dataset first
+      const it = byId.get(idStr);
+      const url = clean(it?.data?.url);
+
+      if (url && !seen.has(url)){
+        seen.add(url);
+        out.push(url);
+        continue;
+      }
+
+      // Fallback: resolve from favmap
+      for (const [u, meta] of Object.entries(favMap)){
+        if (String(meta?.vehicle_id) === idStr){
+          if (!seen.has(u)){
+            seen.add(u);
+            out.push(u);
+          }
+          break;
+        }
+      }
+
+      continue;
+    }
+
+    // 3) Unknown string – try direct favmap match
+    if (favMap[x] && !seen.has(x)){
+      seen.add(x);
+      out.push(x);
+    }
   }
+
+  return out;
+}
 
   // Formatters (keep simple)
   const formatMoney = (raw)=>{

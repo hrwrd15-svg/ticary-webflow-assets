@@ -4153,12 +4153,7 @@ if (t === 'fill' && has(id, /hillshade/i)) {
         }
       });
 
-      saveFavs([...urlSet]);
-
-      if (typeof window.updateFavsPanel === "function"){
-        window.updateFavsPanel();
-      }
-
+     
     }catch(e){}
   }
 

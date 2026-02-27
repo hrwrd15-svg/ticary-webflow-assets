@@ -615,23 +615,28 @@ const listInner =
   window.__ticaryPartB = 'starting';
   listInner.setAttribute('data-as-grid', '1');
 
-// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
-// Use event-based wakeup + longer fallback wait (chunked snapshots can take >8s)
+// ✅ Wait for data before proceeding (event-based + fallback, no duplicates)
 if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
 
-  // Bind once: when Part A finishes cars load, retry Part B immediately
+  // bind once: wake Part B when Part A finishes
   if (!window.__ticaryWaitCarsBound) {
     window.__ticaryWaitCarsBound = true;
-
-    window.addEventListener('ticary:cars-ready', function () {
-      try { bootPartB(0); } catch (e) {}
+    window.addEventListener('ticary:cars-ready', function(){
+      try { bootPartB(0); } catch(e) {}
     }, { once: true });
   }
 
-  // Fallback: keep waiting longer (up to ~60s)
+  // keep waiting longer (chunked snapshot can take time)
   if (tries < 300) return setTimeout(function(){ bootPartB(tries + 1); }, 200);
 
-  console.error('❌ window.__ticaryCars never became available (timed out after ~60s)');
+  console.error('❌ window.__ticaryCars never became available (timeout)');
+  return;
+}
+
+// also wait until at least one card exists (prevents Part B running too early)
+if (!document.querySelector('.as-card')) {
+  if (tries < 120) return setTimeout(function(){ bootPartB(tries + 1); }, 120);
+  console.warn('❌ cards never rendered (timeout)');
   return;
 }
 

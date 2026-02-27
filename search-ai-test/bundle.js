@@ -1260,7 +1260,7 @@ window.__ticaryApply = function () {
       if (commitTimer) clearTimeout(commitTimer);
       commitTimer = setTimeout(() => {
         state.shown = PAGE_SIZE;
-        apply();
+        apply({ keepFilters: true });
         if (typeof window.updateURLFromForm === 'function') {
           try { window.updateURLFromForm(); } catch (e) {}
         }
@@ -1688,7 +1688,8 @@ window.__ticaryApply = function () {
     if (f.distance) addTag(`Within ${f.distance} miles`, 'distance', '');
   }
 
-  function apply() {
+  function apply(opts){
+  opts = opts || {};
     let filtered;
     if (state.favsOnly) {
       filtered = items.filter(x => {
@@ -1971,7 +1972,7 @@ window.__ticaryApply = function () {
     e.preventDefault();
     e.stopPropagation();
     state.shown += PAGE_SIZE;
-    apply();
+    apply({ keepFilters: true });
   });
 
   window.__ticaryState    = state;

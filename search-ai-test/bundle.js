@@ -406,26 +406,28 @@ window.__ticaryCars = Array.isArray(cars)
   }
 })();
 
-// Facet option renderer (kept separate to avoid Webflow 50k embed limit)
+  // Facet option renderer (ES5-safe)
   window.setFacetOptions = function(selectEl, facetArr, selectedValue, total, emptyLabel){
     if (!selectEl) return;
 
     selectEl.innerHTML = '';
     selectEl.appendChild(new Option(emptyLabel || 'Any', ''));
 
-    (facetArr || []).forEach(row => {
-      const v = row.value;
-      if (!v) return;
+    facetArr = facetArr || [];
+    for (var i = 0; i < facetArr.length; i++){
+      var row = facetArr[i] || {};
+      var v = row.value;
+      if (!v) continue;
 
-      const n = Number(row.count || 0);
+      var n = Number(row.count || 0);
 
-      // If option is currently selected, show CURRENT TOTAL
-      const labelCount = (selectedValue && v === selectedValue) ? Number(total || 0) : n;
+    // If option is currently selected, show CURRENT TOTAL
+      var labelCount = (selectedValue && v === selectedValue) ? Number(total || 0) : n;
 
-      selectEl.appendChild(
-        new Option(`${v} (${labelCount.toLocaleString('en-GB')})`, v)
-      );
-    });
+      var label = String(v) + ' (' + labelCount.toLocaleString('en-GB') + ')';
+      selectEl.appendChild(new Option(label, v));
+    }
+  };
   };
 
 (function () {
@@ -2657,11 +2659,10 @@ if (!window.__ticaryFullListsBuilding){
 
   // Hook into Part B lifecycle: after apply() runs, update counts
   function hookApply(){
-    // If Part B exposes __ticaryApply, wrap it once
     if (typeof window.__ticaryApply === 'function' && !window.__ticaryApply.__countsWrapped) {
-      const orig = window.__ticaryApply;
+      var orig = window.__ticaryApply;
       function wrapped(){
-        const r = orig.apply(this, arguments);
+        var r = orig.apply(this, arguments);
         requestUpdate();
         return r;
       }
@@ -2672,20 +2673,22 @@ if (!window.__ticaryFullListsBuilding){
 
   // Add listeners to filter controls (so counts refresh even before apply, but will settle after apply too)
   function bindUI(){
-    const host = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
-    const ids = [
+    var host = document.getElementById('as-filters-body') || document.getElementById('as-filters') || document;
+    var ids = [
       '#asf-make','#asf-model','#asf-trim','#asf-engine-min','#asf-engine-max',
       '#asf-fuel','#asf-gear','#asf-bodytype','#asf-colour',
       '#asf-price-min','#asf-price-max','#asf-fin-min','#asf-fin-max','#asf-mileage-max',
       '#asf-year-min','#asf-year-max'
     ];
-    ids.forEach(sel => {
-      const el = host.querySelector(sel);
-      if (!el || el.__countsBound) return;
+  
+    for (var i=0;i<ids.length;i++){
+      var sel = ids[i];
+      var el = host.querySelector(sel);
+      if (!el || el.__countsBound) continue;
       el.__countsBound = true;
       el.addEventListener('change', requestUpdate);
       el.addEventListener('input', requestUpdate);
-    });
+    }
   }
 
   // Boot loop: wait until Part B dataset/state exist
@@ -2693,25 +2696,31 @@ if (!window.__ticaryFullListsBuilding){
     tries = tries || 0;
 
     if (!Array.isArray(window.__ticaryItems) || !window.__ticaryItems.length) {
-      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
-      return;
-    }
-    if (!(window.__ticaryState || window.state) || !(getState()?.filters)) {
-      if (tries < 120) return setTimeout(() => boot(tries+1), 100);
+      if (tries < 120) return setTimeout(function(){ boot(tries+1); }, 100);
       return;
     }
 
+    // replace getState()?.filters with a safe check
+    var st = (window.__ticaryState || window.state);
+    var hasFilters = false;
+    try { hasFilters = !!(st && st.filters); } catch(e) { hasFilters = false; }
+
+    if (!hasFilters) {
+      if (tries < 120) return setTimeout(function(){ boot(tries+1); }, 100);
+      return;
+    }
+  
     hookApply();
     bindUI();
     requestUpdate();
 
-    // Also re-bind occasionally (filters UI may rebuild)
-    setInterval(() => {
+    setInterval(function(){
       hookApply();
       bindUI();
     }, 1500);
 
   })(0);
+  
 
 })();
 

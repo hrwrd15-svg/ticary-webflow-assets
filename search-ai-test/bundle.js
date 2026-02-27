@@ -173,7 +173,6 @@ function isUK(lat, lng){
   +     ' data-url="'+safe(href)+'">'
 
   +     '<a class="as-media as-link" href="'+safe(href)+'" target="_blank" rel="noopener">'
-  +       '<span class="as-price-badge">'+safe(money(c.price_gbp))+'</span>'
   +       '<span class="as-thumb" aria-hidden="true" style="'+(img ? ('background-image:url('+String(img).replace(/"/g,'%22')+');') : '')+'"></span>'
   +     '</a>'
 
@@ -201,7 +200,7 @@ function isUK(lat, lng){
   +         '</div>'
 
   +         '<div class="as-actions">'
-  +           '<a class="as-cta as-view" href="'+safe(href)+'" target="_blank" rel="noopener">View details</a>'
+  +         '<div class="as-cta as-pricePill" data-open="1" role="button" tabindex="0">'+safe(money(c.price_gbp))+'</div>'
   +           '<div class="as-financeWrap" aria-label="Finance">'
   +             '<div class="as-financeLabel">Finance</div>'
   +             '<span class="as-finance-inline" fs-list-field="finance_monthly" style="display:none;"></span>'
@@ -240,42 +239,43 @@ function isUK(lat, lng){
   }
 
   async function loadSnapshotCarsChunked(){
-    // cars_index.json format:
-    // { "files": ["cars_000.json", "cars_001.json", ...], "total": 160123 }
-    var idxTxt = await fetchText(SNAPSHOT_INDEX);
-    var idx;
-    try{ idx = JSON.parse(idxTxt); }catch(e){ idx = null; }
-    if (!idx || !Array.isArray(idx.files) || !idx.files.length) return null;
+  // 1) get index
+  var idxTxt = await fetchText(SNAPSHOT_INDEX);
+  var idx;
+  try{ idx = JSON.parse(idxTxt); }catch(e){ idx = null; }
+  if (!idx || !Array.isArray(idx.files) || !idx.files.length) return null;
 
-    var out = [];
-    for (var i=0; i<idx.files.length; i++){
-      var file = idx.files[i];
-      var url = SNAPSHOT_BASE + file + '?_=' + Date.now();
-      var txt = await fetchText(url);
-      var arr = parseJSON(txt); // parseJSON supports arrays and {cars:[]}
-      if (arr && arr.length) out = out.concat(arr);
-    }
-    return out.length ? out : null;
+  // 2) fetch each chunk and concat
+  var out = [];
+  for (var i=0; i<idx.files.length; i++){
+    var file = idx.files[i];
+    var url = SNAPSHOT_BASE + file + '?_=' + Date.now();
+    var txt = await fetchText(url);
+    var arr = parseJSON(txt); // parseJSON already supports arrays
+    if (arr && arr.length) out = out.concat(arr);
   }
 
+  return out.length ? out : null;
+}
+
   async function loadCars(){
-    // 1) snapshot (chunked: avoids GitHub 100MB limit)
-    try{
-      var snapCars = await loadSnapshotCarsChunked();
-      if (snapCars && snapCars.length){
-        // if snapshot looks like it lacks coords, fall through to live API
-        var ok = hasCoords(snapCars[0]);
-        if (ok){
-          log('using snapshot (chunked)', snapCars.length);
-          return snapCars;
-        }
-        log('snapshot missing coords → will try live API');
-      } else {
-        log('snapshot empty → will try live API');
-      }
-    }catch(e){
-      log('snapshot failed → will try live API', e && e.message);
+    // 1) snapshot
+    // 1) snapshot (chunked)
+try{
+  var snapCars = await loadSnapshotCarsChunked();
+  if (snapCars && snapCars.length){
+    var ok = hasCoords(snapCars[0]);
+    if (ok){
+      log('using snapshot (chunked)', snapCars.length);
+      return snapCars;
     }
+    log('snapshot missing coords → will try live API');
+  } else {
+    log('snapshot empty → will try live API');
+  }
+}catch(e){
+  log('snapshot failed → will try live API', e && e.message);
+}
 
     // 2) live API fallback
     try{
@@ -517,33 +517,35 @@ window.scope = window.scope || document;
   tries = typeof tries === 'number' ? tries : 0;
   if (window.__ticaryPartBLoaded) return;
   window.__ticaryPartB = 'booting';
-  // Bind global error logging ONCE (do not rebind on every bootPartB retry)
+
+  // ---- global error logger (bind once, non-invasive) ----
   if (!window.__ticaryPartBErrBound) {
     window.__ticaryPartBErrBound = true;
-
-    window.addEventListener('error', function (ev) {
-      try {
-        var msg  = (ev && ev.message) ? ev.message : 'Script error.';
-        var src  = (ev && ev.filename) ? ev.filename : '';
-        var line = (ev && ev.lineno) ? ev.lineno : '';
-        var col  = (ev && ev.colno) ? ev.colno : '';
-
-        console.warn('[ticary:partB] global error:', msg, src, String(line) + ':' + String(col));
-
-        if (ev && ev.error && ev.error.stack) {
-          console.warn(ev.error.stack);
-        }
-      } catch (_) {}
-    });
-
-    window.addEventListener('unhandledrejection', function (ev) {
-      try {
-        var reason = ev && ev.reason;
-        console.warn('[ticary:partB] unhandled rejection:', reason);
-        if (reason && reason.stack) console.warn(reason.stack);
-      } catch (_) {}
+    window.addEventListener('error', function (e) {
+      try { console.warn('Part B global error:', (e && e.message) ? e.message : e); } catch (_) {}
     });
   }
+
+  // ---- event-based readiness: Part A dispatches ticary:cars-ready ----
+  // If cars aren't ready yet, wait for the signal instead of touching anything.
+  if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
+    if (!window.__ticaryPartBWaitBound) {
+      window.__ticaryPartBWaitBound = true;
+
+      // When cars become ready, run bootPartB again (fresh pass)
+      window.addEventListener('ticary:cars-ready', function () {
+        window.__ticaryPartBWaitBound = false;
+        try { bootPartB(0); } catch (e) { console.error('❌ bootPartB retry failed', e); }
+      }, { once: true });
+    }
+
+    // keep your old retry safety net too (but don’t spam forever)
+    if (tries < 120) return setTimeout(function(){ bootPartB(tries + 1); }, 100);
+    console.error('❌ window.__ticaryCars never became available');
+    return;
+  }
+
+  // (everything below remains exactly your current Part B code)
 
 
   // Style for the bottom Clear all button
@@ -638,28 +640,10 @@ const listInner =
   window.__ticaryPartB = 'starting';
   listInner.setAttribute('data-as-grid', '1');
 
-// ✅ Wait for data before proceeding (event-based + fallback, no duplicates)
+// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
 if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
-
-  // bind once: wake Part B when Part A finishes
-  if (!window.__ticaryWaitCarsBound) {
-    window.__ticaryWaitCarsBound = true;
-    window.addEventListener('ticary:cars-ready', function(){
-      try { bootPartB(0); } catch(e) {}
-    }, { once: true });
-  }
-
-  // keep waiting longer (chunked snapshot can take time)
-  if (tries < 300) return setTimeout(function(){ bootPartB(tries + 1); }, 200);
-
-  console.error('❌ window.__ticaryCars never became available (timeout)');
-  return;
-}
-
-// also wait until at least one card exists (prevents Part B running too early)
-if (!document.querySelector('.as-card')) {
-  if (tries < 120) return setTimeout(function(){ bootPartB(tries + 1); }, 120);
-  console.warn('❌ cards never rendered (timeout)');
+  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
+  console.error('❌ window.__ticaryCars never became available');
   return;
 }
 
@@ -764,53 +748,71 @@ window.__ticaryApply = function () {
   window.__ticarySaveFavs = saveFavs;
 
   window.__ticaryEnsureFavButtons = function(scope){
-    try{
-      const cards = (scope || document).querySelectorAll('.as-card');
-      cards.forEach((card) => {
-        if (card.querySelector('.as-fav-btn')) return;
+  try{
+    const cards = (scope || document).querySelectorAll('.as-card');
 
-        const url = card.dataset.url || '';
-        const vid = card.dataset.vehicleId || card.dataset.id || '';
-        const id  = url || vid;
-        if (!id) return;
+    cards.forEach((card) => {
+      if (card.querySelector('.as-fav-btn')) return;
 
-        const btn = document.createElement('button');
-        btn.className = 'as-fav-btn';
-        btn.type = 'button';
-        btn.setAttribute('aria-label', 'Favourite');
-        btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
-        btn.innerHTML = `
-          <svg viewBox="0 0 24 24">
-            <path d="M12.1 21.35c-.13 .09-.3 .09-.43 0C7.14 17.77 4 15.03 2.53 12.7 1.4 10.93 1.2 8.9 2.13 7.18 3.03 5.51 4.77 4.5 6.6 4.5c1.54 0 3.02.74 3.9 1.93.88-1.19 2.36-1.93 3.9-1.93 1.83 0 3.57 1.01 4.47 2.68.93 1.72.73 3.75-.4 5.52-1.47 2.33-4.61 5.07-9.37 8.65z"/>
-          </svg>`;
+      const url = card.dataset.url || '';
+      const vid = card.dataset.vehicleId || card.dataset.id || '';
+      const id  = url || vid;
+      if (!id) return;
 
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const on = btn.getAttribute('aria-pressed') === 'true';
-          const next = !on;
-          btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      const btn = document.createElement('button');
+      btn.className = 'as-fav-btn';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Favourite');
+      btn.setAttribute('aria-pressed', favIDs.has(id) ? 'true' : 'false');
 
-          if (next) favIDs.add(id);
-          else favIDs.delete(id);
+      // ✅ One clean template string (no nested backticks)
+      btn.innerHTML = `
+        <svg class="as-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <!-- outline -->
+          <path class="as-heart-o"
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          <!-- filled -->
+          <path class="as-heart-f"
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      `;
 
-          saveFavs([...favIDs]);
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-          // keep your existing optional integrations
-          if (state.favsOnly) apply();
-          if (window.updateFavsPanel) window.updateFavsPanel();
+        const on = btn.getAttribute('aria-pressed') === 'true';
+        const next = !on;
 
-          try{
-            const v = Number(card.dataset.vehicleId || 0) || 0;
-            if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
-          }catch(e){}
-        });
+        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
 
-        card.appendChild(btn);
+        // ✅ Pop animation only when turning ON
+        if (next) {
+          btn.classList.remove('as-pop');
+          void btn.offsetWidth; // restart animation
+          btn.classList.add('as-pop');
+        }
+
+        if (next) favIDs.add(id);
+        else favIDs.delete(id);
+
+        saveFavs([...favIDs]);
+
+        if (state && state.favsOnly) apply();
+        if (window.updateFavsPanel) window.updateFavsPanel();
+
+        try{
+          const v = Number(card.dataset.vehicleId || 0) || 0;
+          if (window.tcFavSync) window.tcFavSync({ on: next, vehicle_id: v, url: (url || id) });
+        }catch(_){}
       });
-    }catch(e){}
-  };
 
+      // ✅ Actually insert the button
+      card.appendChild(btn);
+    });
+  }catch(e){}
+};
+        
   // Finance placeholder now also runs AFTER render
   window.__ticaryFinanceFix = function(scope){
     try{
@@ -855,8 +857,19 @@ window.__ticaryApply = function () {
 ).sort((a, b) => a - b);
 
 
-  const yearMin = Math.min(...items.map(x => isFinite(x.data.year) ? x.data.year : Infinity));
-  const yearMax = Math.max(...items.map(x => isFinite(x.data.year) ? x.data.year : -Infinity));
+  // Avoid Math.min(...bigArray) / spread on large datasets (can blow the call stack)
+  let yearMin = Infinity;
+  let yearMax = -Infinity;
+  for (let i = 0; i < items.length; i++){
+    const y = items[i]?.data?.year;
+    if (isFinite(y)){
+      if (y < yearMin) yearMin = y;
+      if (y > yearMax) yearMax = y;
+    }
+  }
+  // sensible fallback if years are missing
+  if (!isFinite(yearMin)) yearMin = 0;
+  if (!isFinite(yearMax)) yearMax = 0;
 
    state = {
     sort: 'price-desc',
@@ -987,7 +1000,7 @@ window.__ticaryApply = function () {
               </div>
             </div>
           </div>
-        `, false)}
+        `, true)}
 
         ${sec('asf-year', 'Year', `
           <div class="grid-2">
@@ -1764,7 +1777,7 @@ window.__ticaryApply = function () {
     }
 
 
-    var countEl = $("#as-count-new") || $("#as-count");
+    const countEl = $("#as-count-new");
     if (countEl) {
       countEl.textContent = `${sorted.length} result${sorted.length === 1 ? "" : "s"}`;
     }
@@ -1822,7 +1835,7 @@ window.__ticaryApply = function () {
       apply();
     });
 
-    var filterBtn = $('#as-filters-toggle-new') || $('#as-filters-toggle');
+    const filterBtn = $('#as-filters-toggle-new');
     if (filterBtn) {
       const body   = document.body;
       const THRESH = 320;
@@ -1891,7 +1904,7 @@ window.__ticaryApply = function () {
       });
     }
 
-    var mapBtn = $('#as-map-toggle-new') || $('#as-map-toggle');
+    const mapBtn = $('#as-map-toggle-new');
     if (mapBtn) {
       const body = document.body;
       const isMobile = () =>
@@ -2828,7 +2841,7 @@ window.__ticaryApply = function () {
       const mapEl = document.createElement('div');
       mapEl.id = 'as-map';
       mapWrap.appendChild(mapEl);
-      var toolbar = $('.as-listbar-new') || $('.as-listbar');
+      const toolbar = $('.as-listbar-new');
       if (toolbar?.parentElement) toolbar.parentElement.insertBefore(mapWrap, toolbar);
     }
 
@@ -3094,7 +3107,7 @@ window.__ticaryApply = function () {
   }
 
   function init(){
-    var btn = document.getElementById('as-filters-toggle-new') || document.getElementById('as-filters-toggle');
+    const btn = document.getElementById('as-filters-toggle-new');
     if (!btn) return false;
 
     // Ensure label is correct now
@@ -3125,7 +3138,7 @@ window.__ticaryApply = function () {
     if (!window.__tcFixChangeFiltersLiteTimer){
       window.__tcFixChangeFiltersLiteTimer = setInterval(() => {
         if (!isDesktop()) return;
-        var b = document.getElementById('as-filters-toggle-new') || document.getElementById('as-filters-toggle');
+        const b = document.getElementById('as-filters-toggle-new');
         if (!b) return;
 
         // Only correct if it has drifted

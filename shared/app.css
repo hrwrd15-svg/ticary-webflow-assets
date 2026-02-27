@@ -8599,7 +8599,7 @@ html[data-theme="light"] .as-cardPrice{
 .as-fav-btn .as-heart-o{
   fill: none;
   stroke: rgba(255,255,255,.92);
-  stroke-width: 2;
+  stroke-width: 1.85;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-miterlimit: 1;

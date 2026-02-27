@@ -1,6 +1,17 @@
 (function(){
   if (window.__tcFavMetaCacheV2) return;
   window.__tcFavMetaCacheV2 = 1;
+  // DEBUG: log every write to as:favs
+  (function(){
+    const _setItem = localStorage.setItem;
+    localStorage.setItem = function(k, v){
+      if (k === "as:favs"){
+        console.warn("⚠️ as:favs rewritten:", v);
+        console.trace();
+      }
+      return _setItem.apply(this, arguments);
+    };
+  })();
 
   const FAV_KEY = "as:favs";     // array of URLs
   const MAP_KEY = "as:favmap";   // url -> metadata object

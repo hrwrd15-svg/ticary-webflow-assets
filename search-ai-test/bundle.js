@@ -1,7 +1,3 @@
-window.__asInit_v5 = true;
-window.__asInit_v6 = true;
-window.__asComplete = true;
-
 (function(){
   // =========================
   // CONFIG
@@ -75,7 +71,14 @@ function isUK(lat, lng){
   return { lat:String(lat||''), lng:String(lng||'') };
 }
 
+window.addEventListener('error', (e) => {
+  try { console.warn('[ticary] global error:', e && e.message ? e.message : e); } catch(_) {}
+});
 
+window.addEventListener('unhandledrejection', (e) => {
+  try { console.warn('[ticary] unhandled rejection:', e && e.reason ? e.reason : e); } catch(_) {}
+});
+  
   // =========================
   // CARD RENDERER (Part B calls this)
   // =========================
@@ -391,6 +394,8 @@ window.__ticaryCars = Array.isArray(cars)
 
   }
 
+  window.__ticaryBootPartA = boot;
+
   if (document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', function(){ boot(0); });
   } else {
@@ -615,10 +620,20 @@ const listInner =
   window.__ticaryPartB = 'starting';
   listInner.setAttribute('data-as-grid', '1');
 
-// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
+// ✅ Wait for data before proceeding (event-based, race-proof)
 if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
-  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
-  console.error('❌ window.__ticaryCars never became available');
+  if (!window.__ticaryWaitCarsBound) {
+    window.__ticaryWaitCarsBound = true;
+
+    // When Part A signals cars are ready, restart Part B cleanly
+    window.addEventListener('ticary:cars-ready', () => {
+      try { bootPartB(0); } catch (e) { console.error('❌ bootPartB retry failed', e); }
+    }, { once: true });
+  }
+
+  // Also do a light fallback retry (in case the event was missed)
+  if (tries < 20) return setTimeout(() => bootPartB(tries + 1), 150);
+  console.warn('⏳ waiting for cars…');
   return;
 }
 
@@ -5202,4 +5217,56 @@ if (t === 'fill' && has(id, /hillshade/i)) {
 
   aiBtn.addEventListener('mouseenter', e => { e.stopImmediatePropagation(); }, true);
   aiBtn.addEventListener('mouseover',  e => { e.stopImmediatePropagation(); }, true);
+})();
+
+(function tcLoadSupervisor(){
+  if (window.__tcLoadSupervisor) return;
+  window.__tcLoadSupervisor = true;
+
+  function cardsCount(){
+    return document.querySelectorAll('.as-card').length;
+  }
+
+  function hasToolbar(){
+    return !!document.querySelector('.as-listbar-new');
+  }
+
+  function hasFiltersUI(){
+    return !!document.querySelector('#as-filters .asf, #as-filters-body .asf');
+  }
+
+  function retry(){
+    // If Part A exists and we have no cars/cards, re-run Part A
+    if (typeof window.__ticaryBootPartA === 'function') {
+      try { window.__ticaryBootPartA(0); } catch(e) {}
+    }
+
+    // If Part B apply exists, poke it (safe even if it delays)
+    if (typeof window.__ticaryApply === 'function') {
+      try { window.__ticaryApply(); } catch(e) {}
+    }
+  }
+
+  function check(label){
+    const ok =
+      (Array.isArray(window.__ticaryCars) && window.__ticaryCars.length > 0) &&
+      cardsCount() >= 8 &&
+      hasToolbar() &&
+      hasFiltersUI();
+
+    if (!ok) {
+      console.warn('[ticary] supervisor retry:', label, {
+        cars: Array.isArray(window.__ticaryCars) ? window.__ticaryCars.length : null,
+        cards: cardsCount(),
+        toolbar: hasToolbar(),
+        filters: hasFiltersUI()
+      });
+      retry();
+    }
+  }
+
+  // A few checks spaced out to catch Webflow + slow assets
+  setTimeout(() => check('t+800ms'), 800);
+  setTimeout(() => check('t+2000ms'), 2000);
+  setTimeout(() => check('t+5000ms'), 5000);
 })();

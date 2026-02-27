@@ -3,6 +3,28 @@ window.__asInit_v6 = true;
 window.__asComplete = true;
 
 (function(){
+
+    /* =========================================================
+     GLOBAL HARD FAIL GUARD
+     - Prevents silent JS crash from killing Part B
+  ========================================================= */
+
+  window.addEventListener('error', function(e){
+    console.error('[TICARY HARD ERROR]', e.message, e.filename, e.lineno);
+    tryHideLoaderSafe();
+  });
+
+  window.addEventListener('unhandledrejection', function(e){
+    console.error('[TICARY PROMISE ERROR]', e.reason);
+    tryHideLoaderSafe();
+  });
+
+  function tryHideLoaderSafe(){
+    try{
+      const l = document.getElementById('ticary-loader');
+      if (l) l.classList.add('ticary-loader--hide');
+    }catch(_){}
+  }
   // =========================
   // CONFIG
   // =========================
@@ -513,10 +535,42 @@ window.__ticaryCars = Array.isArray(cars)
 /* Ticary shim: Part B expects `scope` to be a DOM root with querySelector */
 window.scope = window.scope || document;
 
-(function bootPartB(tries) {
-  tries = typeof tries === 'number' ? tries : 0;
+(function(){
+
   if (window.__ticaryPartBLoaded) return;
-  window.__ticaryPartB = 'booting';
+  if (window.__ticaryPartBBooting) return;
+  window.__ticaryPartBBooting = true;
+
+  function waitForEverything(tries){
+    tries = tries || 0;
+
+    const listReady =
+      document.getElementById('vehiclesList') ||
+      document.querySelector('#as-grid .w-dyn-items') ||
+      document.querySelector('#as-grid [role="list"]');
+
+    const dataReady =
+      Array.isArray(window.__ticaryCars) &&
+      window.__ticaryCars.length > 0;
+
+    if (listReady && dataReady){
+      console.log('[ticary] Part B starting safely');
+      initPartB();
+      return;
+    }
+
+    if (tries > 200){
+      console.error('❌ Part B failed to initialise after waiting');
+      return;
+    }
+
+    setTimeout(() => waitForEverything(tries + 1), 50);
+  }
+
+  function initPartB(){
+
+    if (window.__ticaryPartBLoaded) return;
+    window.__ticaryPartBLoaded = true;
   window.addEventListener('error', (e) => {
   // helps catch silent failures from embeds
   console.warn('Part B global error:', e?.message || e);
@@ -605,22 +659,15 @@ const listInner =
   document.querySelector('#as-grid .w-dyn-items') ||
   document.querySelector('#as-grid [role="list"]');
 
-  if (!listInner) {
-    if (tries < 40) {
-      return setTimeout(() => bootPartB(tries + 1), 100);
-    }
-    console.error('❌ No list for Ticary Part B after waiting');
-    return;
-  }
-  window.__ticaryPartB = 'starting';
-  listInner.setAttribute('data-as-grid', '1');
-
-// ✅ Wait for data before proceeding (otherwise filters/items/map will be empty)
-if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
-  if (tries < 80) return setTimeout(() => bootPartB(tries + 1), 100);
-  console.error('❌ window.__ticaryCars never became available');
+if (!listInner) {
+  console.error('❌ No list found for Part B');
   return;
 }
+
+window.__ticaryPartB = 'starting';
+listInner.setAttribute('data-as-grid', '1');
+
+
 
     // ✅ Build from full dataset in memory (NOT from DOM)
   const rawCars = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
@@ -1972,7 +2019,12 @@ window.__ticaryApply = function () {
   } else {
     init();
   }
-})(0);
+
+    } // end initPartB
+
+  waitForEverything();
+
+})();
 
 /* =========================================================
    TICARY — PART B.1 DATA ENRICHMENT (IMPROVED PARSING)

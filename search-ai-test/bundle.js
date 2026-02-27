@@ -517,10 +517,33 @@ window.scope = window.scope || document;
   tries = typeof tries === 'number' ? tries : 0;
   if (window.__ticaryPartBLoaded) return;
   window.__ticaryPartB = 'booting';
-  window.addEventListener('error', (e) => {
-  // helps catch silent failures from embeds
-  console.warn('Part B global error:', e?.message || e);
-});
+  // Bind global error logging ONCE (do not rebind on every bootPartB retry)
+  if (!window.__ticaryPartBErrBound) {
+    window.__ticaryPartBErrBound = true;
+
+    window.addEventListener('error', function (ev) {
+      try {
+        var msg  = (ev && ev.message) ? ev.message : 'Script error.';
+        var src  = (ev && ev.filename) ? ev.filename : '';
+        var line = (ev && ev.lineno) ? ev.lineno : '';
+        var col  = (ev && ev.colno) ? ev.colno : '';
+
+        console.warn('[ticary:partB] global error:', msg, src, String(line) + ':' + String(col));
+
+        if (ev && ev.error && ev.error.stack) {
+          console.warn(ev.error.stack);
+        }
+      } catch (_) {}
+    });
+
+    window.addEventListener('unhandledrejection', function (ev) {
+      try {
+        var reason = ev && ev.reason;
+        console.warn('[ticary:partB] unhandled rejection:', reason);
+        if (reason && reason.stack) console.warn(reason.stack);
+      } catch (_) {}
+    });
+  }
 
 
   // Style for the bottom Clear all button

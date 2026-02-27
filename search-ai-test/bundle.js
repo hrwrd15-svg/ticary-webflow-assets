@@ -1803,159 +1803,168 @@ window.__ticaryApply = function () {
   }
 
   function buildToolbar() {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'as-listbar-new';
-    toolbar.innerHTML = `
-      <div class="as-listbar-left">
-        <span id="as-count-new">0 results</span>
-        <div class="as-filter-tags"></div>
-      </div>
-      <div class="as-listbar-right">
-        <select id="as-sort-new">
-          <option value="price-desc">Price: High to Low</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="finance-asc">Finance: Low to High</option>
-          <option value="finance-desc">Finance: High to Low</option>
-          <option value="distance-asc">Distance: Closest first</option>
-          <option value="year-desc">Newest first</option>
-          <option value="year-asc">Oldest first</option>
-          <option value="mileage-asc">Mileage: Low to High</option>
-          <option value="mileage-desc">Mileage: High to Low</option>
-        </select>
-        <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
-        <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
-      </div>
-    `;
-    listInner.parentElement?.insertBefore(toolbar, listInner);
+  // ✅ If toolbar already exists, don't create another
+  const existing = document.querySelector('.as-listbar-new');
+  if (existing) {
+    // remove any extras if they exist
+    const bars = document.querySelectorAll('.as-listbar-new');
+    for (let i = 1; i < bars.length; i++) {
+      try { bars[i].remove(); } catch(e) {}
+    }
+    // wire only once
+    if (existing.__tcWired) return;
+    existing.__tcWired = true;
+  }
 
-    const sortSel = $('#as-sort-new');
-    if (sortSel) sortSel.value = state.sort;
-    sortSel?.addEventListener('change', (e) => {
-      state.sort = e.target.value;
-      apply();
-    });
+  const toolbar = existing || document.createElement('div');
+  toolbar.className = 'as-listbar-new';
+  toolbar.innerHTML = `
+    <div class="as-listbar-left">
+      <span id="as-count-new">0 results</span>
+      <div class="as-filter-tags"></div>
+    </div>
+    <div class="as-listbar-right">
+      <select id="as-sort-new">
+        <option value="price-desc">Price: High to Low</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="finance-asc">Finance: Low to High</option>
+        <option value="finance-desc">Finance: High to Low</option>
+        <option value="distance-asc">Distance: Closest first</option>
+        <option value="year-desc">Newest first</option>
+        <option value="year-asc">Oldest first</option>
+        <option value="mileage-asc">Mileage: Low to High</option>
+        <option value="mileage-desc">Mileage: High to Low</option>
+      </select>
+      <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
+      <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
+    </div>
+  `;
 
-    const filterBtn = $('#as-filters-toggle-new');
-    if (filterBtn) {
-      const body   = document.body;
-      const THRESH = 320;
-      let changeMode = false;
+  if (!existing) listInner.parentElement?.insertBefore(toolbar, listInner);
 
-      const isMobile = () =>
-        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  // ✅ mark wired (prevents re-binding listeners)
+  toolbar.__tcWired = true;
 
-      const filtersOpen = () => !body.classList.contains('as-no-filters');
+  const sortSel = $('#as-sort-new');
+  if (sortSel) sortSel.value = state.sort;
+  sortSel?.addEventListener('change', (e) => {
+    state.sort = e.target.value;
+    apply();
+  });
 
-      function setNormalLabel() {
-        if (isMobile()) {
-          filterBtn.textContent = 'Filters';
-        } else {
-          filterBtn.textContent = filtersOpen() ? 'Hide filters' : 'Show filters';
-        }
+  const filterBtn = $('#as-filters-toggle-new');
+  if (filterBtn) {
+    const body   = document.body;
+    const THRESH = 320;
+    let changeMode = false;
+
+    const isMobile = () =>
+      window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+    const filtersOpen = () => !body.classList.contains('as-no-filters');
+
+    function setNormalLabel() {
+      if (isMobile()) {
+        filterBtn.textContent = 'Filters';
+      } else {
+        filterBtn.textContent = filtersOpen() ? 'Hide filters' : 'Show filters';
       }
-
-      function setChangeLabel() {
-        filterBtn.textContent = 'Change filters';
-      }
-
-      function updateMode() {
-        if (isMobile()) {
-          changeMode = false;
-          setNormalLabel();
-          return;
-        }
-        const shouldChange = window.scrollY > THRESH;
-        if (shouldChange && !changeMode) {
-          changeMode = true;
-          setChangeLabel();
-        } else if (!shouldChange && changeMode) {
-          changeMode = false;
-          setNormalLabel();
-        }
-      }
-
-      setNormalLabel();
-      window.addEventListener('scroll', updateMode, { passive: true });
-
-      filterBtn.addEventListener('click', () => {
-        if (isMobile()) {
-          body.classList.add('as-no-filters');
-          if (window.tcFilterPanel && typeof window.tcFilterPanel.open === 'function') {
-            window.tcFilterPanel.open();
-          }
-          return;
-        }
-
-        if (changeMode) {
-          if (!filtersOpen()) {
-            body.classList.remove('as-no-filters');
-          }
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          body.classList.toggle('as-no-filters');
-          setNormalLabel();
-        }
-
-        setTimeout(() => {
-          if (window.map && typeof window.map.resize === 'function') {
-            window.map.resize();
-          }
-        }, 120);
-      });
     }
 
-    const mapBtn = $('#as-map-toggle-new');
-    if (mapBtn) {
-      const body = document.body;
-      const isMobile = () =>
-        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    function setChangeLabel() {
+      filterBtn.textContent = 'Change filters';
+    }
 
-      const mapVisible = () => !body.classList.contains('as-no-map');
+    function updateMode() {
+      if (isMobile()) {
+        changeMode = false;
+        setNormalLabel();
+        return;
+      }
+      const shouldChange = window.scrollY > THRESH;
+      if (shouldChange && !changeMode) {
+        changeMode = true;
+        setChangeLabel();
+      } else if (!shouldChange && changeMode) {
+        changeMode = false;
+        setNormalLabel();
+      }
+    }
 
-      function setMapLabel() {
-        if (isMobile()) {
-          mapBtn.textContent = mapVisible() ? 'List' : 'Map';
-        } else {
-          mapBtn.textContent = mapVisible() ? 'Hide map' : 'Show map';
+    setNormalLabel();
+    window.addEventListener('scroll', updateMode, { passive: true });
+
+    filterBtn.addEventListener('click', () => {
+      if (isMobile()) {
+        body.classList.add('as-no-filters');
+        if (window.tcFilterPanel && typeof window.tcFilterPanel.open === 'function') {
+          window.tcFilterPanel.open();
         }
+        return;
       }
 
+      if (changeMode) {
+        if (!filtersOpen()) body.classList.remove('as-no-filters');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        body.classList.toggle('as-no-filters');
+        setNormalLabel();
+      }
+
+      setTimeout(() => {
+        if (window.map && typeof window.map.resize === 'function') window.map.resize();
+      }, 120);
+    });
+  }
+
+  const mapBtn = $('#as-map-toggle-new');
+  if (mapBtn) {
+    const body = document.body;
+    const isMobile = () =>
+      window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+    const mapVisible = () => !body.classList.contains('as-no-map');
+
+    function setMapLabel() {
+      if (isMobile()) {
+        mapBtn.textContent = mapVisible() ? 'List' : 'Map';
+      } else {
+        mapBtn.textContent = mapVisible() ? 'Hide map' : 'Show map';
+      }
+    }
+
+    setMapLabel();
+
+    mapBtn.addEventListener('click', () => {
+      if (isMobile()) {
+        const visible = mapVisible();
+        if (visible) {
+          body.classList.add('as-no-map');
+          body.classList.remove('as-mobile-map-only');
+        } else {
+          body.classList.remove('as-no-map');
+          body.classList.add('as-mobile-map-only');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        setMapLabel();
+        setTimeout(() => {
+          if (window.map && typeof window.map.resize === 'function') window.map.resize();
+        }, 120);
+        return;
+      }
+
+      const wasVisible = mapVisible();
+      body.classList.toggle('as-no-map');
       setMapLabel();
 
-      mapBtn.addEventListener('click', () => {
-        if (isMobile()) {
-          const visible = mapVisible();
-          if (visible) {
-            body.classList.add('as-no-map');
-            body.classList.remove('as-mobile-map-only');
-          } else {
-            body.classList.remove('as-no-map');
-            body.classList.add('as-mobile-map-only');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-          setMapLabel();
-          setTimeout(() => {
-            if (window.map && typeof window.map.resize === 'function') {
-              window.map.resize();
-            }
-          }, 120);
-          return;
-        }
-
-        const wasVisible = mapVisible();
-        body.classList.toggle('as-no-map');
-        setMapLabel();
-
-        if (!wasVisible) {
-          setTimeout(() => {
-            if (window.map && typeof window.map.resize === 'function') {
-              window.map.resize();
-            }
-          }, 100);
-        }
-      });
-    }
+      if (!wasVisible) {
+        setTimeout(() => {
+          if (window.map && typeof window.map.resize === 'function') window.map.resize();
+        }, 100);
+      }
+    });
   }
+}
 
   const more = $('#as-more');
   if (more) more.addEventListener('click', (e) => {

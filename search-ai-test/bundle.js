@@ -736,24 +736,21 @@ if (
 window.__ticaryItems = items;
 window.__ticaryApply = function () {
 
-  // 🔒 Prevent overlapping / stacked apply calls
   if (window.__ticaryApplyRunning) return;
   window.__ticaryApplyRunning = true;
 
+  if (!state) {
+    window.__ticaryApplyRunning = false;
+    return setTimeout(window.__ticaryApply, 50);
+  }
+
   try {
-
-    if (!state) {
-      window.__ticaryApplyRunning = false;
-      return setTimeout(window.__ticaryApply, 50);
-    }
-
     apply();
-
   } catch (e) {
     console.error('❌ Part B apply() crashed', e);
-  } finally {
-    window.__ticaryApplyRunning = false;
   }
+
+  window.__ticaryApplyRunning = false;
 };
 
 

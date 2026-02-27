@@ -673,42 +673,14 @@
     const serverIDs = await fetchServerFavIDs(token);
     paintHeartsFromServerIDs(serverIDs);
 
-    // Build URL set ONLY from cached favmap (don’t rely on rendered cards)
-    const favMap = loadFavMap(); // url -> meta (meta.vehicle_id)
-    const nextUrls = [];
+    // DO NOT rebuild as:favs here.
+    // Drawer state is authoritative locally.
+    // Only update heart UI based on server truth.
 
-    // Keep any existing URLs that we cannot verify (prevents flicker)
-    const currentUrls = loadFavUrls();
-    const currentSet  = new Set(currentUrls);
-
-    // 1) Add any URL whose meta.vehicle_id is in serverIDs
-    const idSet = new Set(serverIDs.map(Number));
-
-    for (const [url, meta] of Object.entries(favMap)){
-      const vid = Number(meta?.vehicle_id || meta?.vehicleId || 0);
-
-      // if we cannot resolve vid yet → KEEP IT (prevents flicker)
-      if (!vid){
-        nextUrls.push(clean(url));
-        continue;
-      }
-
-      if (idSet.has(vid)){
-        nextUrls.push(clean(url));
-      }
-    }
-
-    // 2) Also keep existing URLs that have no meta yet (unknown vid)
-    for (const url of currentSet){
-      const meta = favMap[url];
-      const vid = Number(meta?.vehicle_id || meta?.vehicleId || 0);
-      if (!vid) nextUrls.push(url);
-    }
-
-    // De-dupe
-    const finalUrls = Array.from(new Set(nextUrls)).filter(Boolean);
-
-    saveJSON(FAV_KEY, finalUrls);
+    try{
+      window.tcRefreshFavDrawer?.();
+    }catch(e){}
+    
 
     // Re-render drawer + badge if your header exposes it
     try{ window.updateFavsPanel?.(); }catch(e){}

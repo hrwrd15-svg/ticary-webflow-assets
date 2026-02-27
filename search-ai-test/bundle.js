@@ -517,35 +517,10 @@ window.scope = window.scope || document;
   tries = typeof tries === 'number' ? tries : 0;
   if (window.__ticaryPartBLoaded) return;
   window.__ticaryPartB = 'booting';
-
-  // ---- global error logger (bind once, non-invasive) ----
-  if (!window.__ticaryPartBErrBound) {
-    window.__ticaryPartBErrBound = true;
-    window.addEventListener('error', function (e) {
-      try { console.warn('Part B global error:', (e && e.message) ? e.message : e); } catch (_) {}
-    });
-  }
-
-  // ---- event-based readiness: Part A dispatches ticary:cars-ready ----
-  // If cars aren't ready yet, wait for the signal instead of touching anything.
-  if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
-    if (!window.__ticaryPartBWaitBound) {
-      window.__ticaryPartBWaitBound = true;
-
-      // When cars become ready, run bootPartB again (fresh pass)
-      window.addEventListener('ticary:cars-ready', function () {
-        window.__ticaryPartBWaitBound = false;
-        try { bootPartB(0); } catch (e) { console.error('❌ bootPartB retry failed', e); }
-      }, { once: true });
-    }
-
-    // keep your old retry safety net too (but don’t spam forever)
-    if (tries < 120) return setTimeout(function(){ bootPartB(tries + 1); }, 100);
-    console.error('❌ window.__ticaryCars never became available');
-    return;
-  }
-
-  // (everything below remains exactly your current Part B code)
+  window.addEventListener('error', (e) => {
+  // helps catch silent failures from embeds
+  console.warn('Part B global error:', e?.message || e);
+});
 
 
   // Style for the bottom Clear all button
@@ -1260,7 +1235,7 @@ window.__ticaryApply = function () {
       if (commitTimer) clearTimeout(commitTimer);
       commitTimer = setTimeout(() => {
         state.shown = PAGE_SIZE;
-        apply({ keepFilters: true });
+        apply();
         if (typeof window.updateURLFromForm === 'function') {
           try { window.updateURLFromForm(); } catch (e) {}
         }
@@ -1688,8 +1663,7 @@ window.__ticaryApply = function () {
     if (f.distance) addTag(`Within ${f.distance} miles`, 'distance', '');
   }
 
-  function apply(opts){
-  opts = opts || {};
+  function apply() {
     let filtered;
     if (state.favsOnly) {
       filtered = items.filter(x => {
@@ -1804,175 +1778,166 @@ window.__ticaryApply = function () {
   }
 
   function buildToolbar() {
-  // ✅ If toolbar already exists, don't create another
-  const existing = document.querySelector('.as-listbar-new');
-  if (existing) {
-    // remove any extras if they exist
-    const bars = document.querySelectorAll('.as-listbar-new');
-    for (let i = 1; i < bars.length; i++) {
-      try { bars[i].remove(); } catch(e) {}
-    }
-    // wire only once
-    if (existing.__tcWired) return;
-    existing.__tcWired = true;
-  }
+    const toolbar = document.createElement('div');
+    toolbar.className = 'as-listbar-new';
+    toolbar.innerHTML = `
+      <div class="as-listbar-left">
+        <span id="as-count-new">0 results</span>
+        <div class="as-filter-tags"></div>
+      </div>
+      <div class="as-listbar-right">
+        <select id="as-sort-new">
+          <option value="price-desc">Price: High to Low</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="finance-asc">Finance: Low to High</option>
+          <option value="finance-desc">Finance: High to Low</option>
+          <option value="distance-asc">Distance: Closest first</option>
+          <option value="year-desc">Newest first</option>
+          <option value="year-asc">Oldest first</option>
+          <option value="mileage-asc">Mileage: Low to High</option>
+          <option value="mileage-desc">Mileage: High to Low</option>
+        </select>
+        <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
+        <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
+      </div>
+    `;
+    listInner.parentElement?.insertBefore(toolbar, listInner);
 
-  const toolbar = existing || document.createElement('div');
-  toolbar.className = 'as-listbar-new';
-  toolbar.innerHTML = `
-    <div class="as-listbar-left">
-      <span id="as-count-new">0 results</span>
-      <div class="as-filter-tags"></div>
-    </div>
-    <div class="as-listbar-right">
-      <select id="as-sort-new">
-        <option value="price-desc">Price: High to Low</option>
-        <option value="price-asc">Price: Low to High</option>
-        <option value="finance-asc">Finance: Low to High</option>
-        <option value="finance-desc">Finance: High to Low</option>
-        <option value="distance-asc">Distance: Closest first</option>
-        <option value="year-desc">Newest first</option>
-        <option value="year-asc">Oldest first</option>
-        <option value="mileage-asc">Mileage: Low to High</option>
-        <option value="mileage-desc">Mileage: High to Low</option>
-      </select>
-      <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
-      <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
-    </div>
-  `;
-
-  if (!existing) listInner.parentElement?.insertBefore(toolbar, listInner);
-
-  // ✅ mark wired (prevents re-binding listeners)
-  toolbar.__tcWired = true;
-
-  const sortSel = $('#as-sort-new');
-  if (sortSel) sortSel.value = state.sort;
-  sortSel?.addEventListener('change', (e) => {
-    state.sort = e.target.value;
-    apply();
-  });
-
-  const filterBtn = $('#as-filters-toggle-new');
-  if (filterBtn) {
-    const body   = document.body;
-    const THRESH = 320;
-    let changeMode = false;
-
-    const isMobile = () =>
-      window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-
-    const filtersOpen = () => !body.classList.contains('as-no-filters');
-
-    function setNormalLabel() {
-      if (isMobile()) {
-        filterBtn.textContent = 'Filters';
-      } else {
-        filterBtn.textContent = filtersOpen() ? 'Hide filters' : 'Show filters';
-      }
-    }
-
-    function setChangeLabel() {
-      filterBtn.textContent = 'Change filters';
-    }
-
-    function updateMode() {
-      if (isMobile()) {
-        changeMode = false;
-        setNormalLabel();
-        return;
-      }
-      const shouldChange = window.scrollY > THRESH;
-      if (shouldChange && !changeMode) {
-        changeMode = true;
-        setChangeLabel();
-      } else if (!shouldChange && changeMode) {
-        changeMode = false;
-        setNormalLabel();
-      }
-    }
-
-    setNormalLabel();
-    window.addEventListener('scroll', updateMode, { passive: true });
-
-    filterBtn.addEventListener('click', () => {
-      if (isMobile()) {
-        body.classList.add('as-no-filters');
-        if (window.tcFilterPanel && typeof window.tcFilterPanel.open === 'function') {
-          window.tcFilterPanel.open();
-        }
-        return;
-      }
-
-      if (changeMode) {
-        if (!filtersOpen()) body.classList.remove('as-no-filters');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        body.classList.toggle('as-no-filters');
-        setNormalLabel();
-      }
-
-      setTimeout(() => {
-        if (window.map && typeof window.map.resize === 'function') window.map.resize();
-      }, 120);
+    const sortSel = $('#as-sort-new');
+    if (sortSel) sortSel.value = state.sort;
+    sortSel?.addEventListener('change', (e) => {
+      state.sort = e.target.value;
+      apply();
     });
-  }
 
-  const mapBtn = $('#as-map-toggle-new');
-  if (mapBtn) {
-    const body = document.body;
-    const isMobile = () =>
-      window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    const filterBtn = $('#as-filters-toggle-new');
+    if (filterBtn) {
+      const body   = document.body;
+      const THRESH = 320;
+      let changeMode = false;
 
-    const mapVisible = () => !body.classList.contains('as-no-map');
+      const isMobile = () =>
+        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
 
-    function setMapLabel() {
-      if (isMobile()) {
-        mapBtn.textContent = mapVisible() ? 'List' : 'Map';
-      } else {
-        mapBtn.textContent = mapVisible() ? 'Hide map' : 'Show map';
+      const filtersOpen = () => !body.classList.contains('as-no-filters');
+
+      function setNormalLabel() {
+        if (isMobile()) {
+          filterBtn.textContent = 'Filters';
+        } else {
+          filterBtn.textContent = filtersOpen() ? 'Hide filters' : 'Show filters';
+        }
       }
+
+      function setChangeLabel() {
+        filterBtn.textContent = 'Change filters';
+      }
+
+      function updateMode() {
+        if (isMobile()) {
+          changeMode = false;
+          setNormalLabel();
+          return;
+        }
+        const shouldChange = window.scrollY > THRESH;
+        if (shouldChange && !changeMode) {
+          changeMode = true;
+          setChangeLabel();
+        } else if (!shouldChange && changeMode) {
+          changeMode = false;
+          setNormalLabel();
+        }
+      }
+
+      setNormalLabel();
+      window.addEventListener('scroll', updateMode, { passive: true });
+
+      filterBtn.addEventListener('click', () => {
+        if (isMobile()) {
+          body.classList.add('as-no-filters');
+          if (window.tcFilterPanel && typeof window.tcFilterPanel.open === 'function') {
+            window.tcFilterPanel.open();
+          }
+          return;
+        }
+
+        if (changeMode) {
+          if (!filtersOpen()) {
+            body.classList.remove('as-no-filters');
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          body.classList.toggle('as-no-filters');
+          setNormalLabel();
+        }
+
+        setTimeout(() => {
+          if (window.map && typeof window.map.resize === 'function') {
+            window.map.resize();
+          }
+        }, 120);
+      });
     }
 
-    setMapLabel();
+    const mapBtn = $('#as-map-toggle-new');
+    if (mapBtn) {
+      const body = document.body;
+      const isMobile = () =>
+        window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
 
-    mapBtn.addEventListener('click', () => {
-      if (isMobile()) {
-        const visible = mapVisible();
-        if (visible) {
-          body.classList.add('as-no-map');
-          body.classList.remove('as-mobile-map-only');
+      const mapVisible = () => !body.classList.contains('as-no-map');
+
+      function setMapLabel() {
+        if (isMobile()) {
+          mapBtn.textContent = mapVisible() ? 'List' : 'Map';
         } else {
-          body.classList.remove('as-no-map');
-          body.classList.add('as-mobile-map-only');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          mapBtn.textContent = mapVisible() ? 'Hide map' : 'Show map';
         }
-        setMapLabel();
-        setTimeout(() => {
-          if (window.map && typeof window.map.resize === 'function') window.map.resize();
-        }, 120);
-        return;
       }
 
-      const wasVisible = mapVisible();
-      body.classList.toggle('as-no-map');
       setMapLabel();
 
-      if (!wasVisible) {
-        setTimeout(() => {
-          if (window.map && typeof window.map.resize === 'function') window.map.resize();
-        }, 100);
-      }
-    });
+      mapBtn.addEventListener('click', () => {
+        if (isMobile()) {
+          const visible = mapVisible();
+          if (visible) {
+            body.classList.add('as-no-map');
+            body.classList.remove('as-mobile-map-only');
+          } else {
+            body.classList.remove('as-no-map');
+            body.classList.add('as-mobile-map-only');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          setMapLabel();
+          setTimeout(() => {
+            if (window.map && typeof window.map.resize === 'function') {
+              window.map.resize();
+            }
+          }, 120);
+          return;
+        }
+
+        const wasVisible = mapVisible();
+        body.classList.toggle('as-no-map');
+        setMapLabel();
+
+        if (!wasVisible) {
+          setTimeout(() => {
+            if (window.map && typeof window.map.resize === 'function') {
+              window.map.resize();
+            }
+          }, 100);
+        }
+      });
+    }
   }
-}
 
   const more = $('#as-more');
   if (more) more.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     state.shown += PAGE_SIZE;
-    apply({ keepFilters: true });
+    apply();
   });
 
   window.__ticaryState    = state;

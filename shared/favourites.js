@@ -525,9 +525,15 @@
   }
 
   function refreshDrawer(){
-    const favUrls = normaliseFavsToUrls();
+    let favUrls = normaliseFavsToUrls();
+
+    // If dataset not ready, fall back to raw storage
+    if (!favUrls.length) {
+      const raw = loadFavs().map(clean).filter(Boolean);
+      if (raw.length) favUrls = raw;
+    }
     // keep storage as URLs so the header embed stays happy
-    saveFavs(favUrls);
+    
         // ✅ Backfill favmap from full dataset so drawer remove can delete from DB even if not rendered
     try{
       const map = loadJSON(MAP_KEY, {});

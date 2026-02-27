@@ -1775,37 +1775,47 @@ window.__ticaryApply = function () {
   }
 
   function buildToolbar() {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'as-listbar-new';
-    toolbar.innerHTML = `
-      <div class="as-listbar-left">
-        <span id="as-count-new">0 results</span>
-        <div class="as-filter-tags"></div>
-      </div>
-      <div class="as-listbar-right">
-        <select id="as-sort-new">
-          <option value="price-desc">Price: High to Low</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="finance-asc">Finance: Low to High</option>
-          <option value="finance-desc">Finance: High to Low</option>
-          <option value="distance-asc">Distance: Closest first</option>
-          <option value="year-desc">Newest first</option>
-          <option value="year-asc">Oldest first</option>
-          <option value="mileage-asc">Mileage: Low to High</option>
-          <option value="mileage-desc">Mileage: High to Low</option>
-        </select>
-        <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
-        <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
-      </div>
-    `;
-    listInner.parentElement?.insertBefore(toolbar, listInner);
 
-    const sortSel = $('#as-sort-new');
-    if (sortSel) sortSel.value = state.sort;
-    sortSel?.addEventListener('change', (e) => {
+  // 🔒 If toolbar already exists, do not create another
+  if (document.querySelector('.as-listbar-new')) return;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'as-listbar-new';
+
+  toolbar.innerHTML = `
+    <div class="as-listbar-left">
+      <span id="as-count-new">0 results</span>
+      <div class="as-filter-tags"></div>
+    </div>
+    <div class="as-listbar-right">
+      <select id="as-sort-new">
+        <option value="price-desc">Price: High to Low</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="finance-asc">Finance: Low to High</option>
+        <option value="finance-desc">Finance: High to Low</option>
+        <option value="distance-asc">Distance: Closest first</option>
+        <option value="year-desc">Newest first</option>
+        <option value="year-asc">Oldest first</option>
+        <option value="mileage-asc">Mileage: Low to High</option>
+        <option value="mileage-desc">Mileage: High to Low</option>
+      </select>
+      <button type="button" id="as-filters-toggle-new" class="as-ctrl-new">Hide filters</button>
+      <button type="button" id="as-map-toggle-new" class="as-ctrl-new">Hide map</button>
+    </div>
+  `;
+
+  listInner.parentElement.insertBefore(toolbar, listInner);
+
+  const sortSel = document.getElementById('as-sort-new');
+  if (sortSel) sortSel.value = state.sort;
+
+  if (sortSel) {
+    sortSel.addEventListener('change', function (e) {
       state.sort = e.target.value;
       apply();
     });
+  }
+}
 
     const filterBtn = $('#as-filters-toggle-new');
     if (filterBtn) {

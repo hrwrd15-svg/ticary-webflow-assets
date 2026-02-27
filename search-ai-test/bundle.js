@@ -638,7 +638,12 @@ if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
 }
 
     // ✅ Build from full dataset in memory (NOT from DOM)
-  const rawCars = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
+  const rawCarsAll = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
+  window.__ticaryCarsAll = rawCarsAll; // keep the full set accessible
+
+  // Only scan a small slice up-front so the UI doesn't "hang"
+  const rawCars = rawCarsAll.length > 6000 ? rawCarsAll.slice(0, 6000) : rawCarsAll;
+
   const items = rawCars.map((car) => {
     car = car || {};
 
@@ -820,46 +825,179 @@ window.__ticaryApply = function () {
   };
 
 
-  // GLOBAL LISTS FILTERS
-  const allMakes     = uniqueSorted(items.map(x => x.data.make));
-  const modelsByMake = {};
+  // GLOBAL LISTS FILTERS (FAST BOOT + BACKGROUND FULL BUILD)
 
-  items.forEach(({ data }) => {
-    if (data.make)  (modelsByMake[data.make]  ||= new Set()).add(data.model);
-  });
+function setSelectOptions(sel, values, placeholder){
+  if (!sel) return;
+  const cur = sel.value;
+  const opts = [`<option value="">${placeholder}</option>`]
+    .concat(values.map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${String(v)}</option>`));
+  sel.innerHTML = opts.join('');
+  // try to keep selection
+  if (cur) sel.value = cur;
+}
 
-  Object.keys(modelsByMake).forEach(m => modelsByMake[m] = uniqueSorted([...modelsByMake[m]]));
+function computeListsFromCars(cars){
+  const makes = new Set();
+  const fuels = new Set();
+  const gear = new Set();
+  const bodies = new Set();
+  const cols = new Set();
+  const engines = new Set();
 
-  const fuels     = uniqueSorted(items.map(x => x.data.fuel));
-  const gearboxes = uniqueSorted(items.map(x => x.data.gearbox));
-  const bodytypes = uniqueSorted(items.map(x => x.data.bodytype)).filter(Boolean);
-  const colours   = uniqueSorted(items.map(x => x.data.color)).filter(Boolean);
-  const engines = Array.from(
-  new Set(
-    items
-      .map(x => x.data.engine)
-      .filter(v => {
-        const n = num(v);
-        return isFinite(n) && n > 0;
-      })
-      .map(v => Math.round(num(v) * 10) / 10)
-  )
-).sort((a, b) => a - b);
+  let yMin = Infinity, yMax = -Infinity;
 
+  for (let i=0; i<cars.length; i++){
+    const c = cars[i] || {};
 
-  // Avoid Math.min(...bigArray) / spread on large datasets (can blow the call stack)
-  let yearMin = Infinity;
-  let yearMax = -Infinity;
-  for (let i = 0; i < items.length; i++){
-    const y = items[i]?.data?.year;
+    const make = c.make || c.data?.make;
+    const model = c.model || c.data?.model; // model used later in modelsByMake
+    const fuel  = c.fuel_type || c.fuel || c.data?.fuel;
+    const gb    = c.transmission || c.gearbox || c.data?.gearbox;
+    const body  = c.body_type || c.bodytype || c.data?.bodytype;
+    const col   = c.color || c.colour || c.data?.color;
+    const eng   = c.engine_size_l || c.engine || c.data?.engine;
+    const year  = c.year || c.data?.year;
+
+    if (make) makes.add(make);
+    if (fuel) fuels.add(fuel);
+    if (gb)   gear.add(gb);
+    if (body) bodies.add(body);
+    if (col)  cols.add(col);
+
+    const en = num(eng);
+    if (isFinite(en) && en > 0) engines.add(Math.round(en * 10) / 10);
+
+    const y = num(year);
     if (isFinite(y)){
-      if (y < yearMin) yearMin = y;
-      if (y > yearMax) yearMax = y;
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
     }
   }
-  // sensible fallback if years are missing
-  if (!isFinite(yearMin)) yearMin = 0;
-  if (!isFinite(yearMax)) yearMax = 0;
+
+  return {
+    makes: uniqueSorted([...makes]),
+    fuels: uniqueSorted([...fuels]),
+    gearboxes: uniqueSorted([...gear]),
+    bodytypes: uniqueSorted([...bodies]).filter(Boolean),
+    colours: uniqueSorted([...cols]).filter(Boolean),
+    engines: [...engines].sort((a,b)=>a-b),
+    yearMin: isFinite(yMin) ? yMin : 0,
+    yearMax: isFinite(yMax) ? yMax : 0,
+  };
+}
+
+// 1) fast boot lists from the 6k slice you already mapped into `items`
+const bootLists = computeListsFromCars(rawCars);
+
+// expose boot lists (so buildFiltersUI can use them immediately)
+const allMakes = bootLists.makes;
+const modelsByMake = {}; // filled below (boot slice)
+rawCars.forEach((c) => {
+  const make = c?.make;
+  const model = c?.model;
+  if (make && model) (modelsByMake[make] ||= new Set()).add(model);
+});
+Object.keys(modelsByMake).forEach(m => modelsByMake[m] = uniqueSorted([...modelsByMake[m]]));
+
+const fuels     = bootLists.fuels;
+const gearboxes = bootLists.gearboxes;
+const bodytypes = bootLists.bodytypes;
+const colours   = bootLists.colours;
+const engines   = bootLists.engines;
+
+// Avoid spread/min/max on huge arrays
+let yearMin = bootLists.yearMin;
+let yearMax = bootLists.yearMax;
+
+// 2) background “full dataset” rebuild (non-blocking)
+if (!window.__ticaryFullListsBuilding){
+  window.__ticaryFullListsBuilding = true;
+
+  const all = window.__ticaryCarsAll || [];
+  const CHUNK = 8000;
+
+  // incremental sets so we don't lock up the main thread
+  const makesS = new Set(allMakes);
+  const fuelsS = new Set(fuels);
+  const gearS  = new Set(gearboxes);
+  const bodyS  = new Set(bodytypes);
+  const colS   = new Set(colours);
+  const engS   = new Set(engines);
+
+  let yMin2 = yearMin, yMax2 = yearMax;
+
+  // model map needs sets
+  const modelsMap = {};
+  Object.keys(modelsByMake).forEach(m => modelsMap[m] = new Set(modelsByMake[m]));
+
+  let idx = 0;
+
+  function step(){
+    const end = Math.min(idx + CHUNK, all.length);
+    for (; idx < end; idx++){
+      const c = all[idx] || {};
+
+      if (c.make) makesS.add(c.make);
+      if (c.fuel_type) fuelsS.add(c.fuel_type);
+      if (c.transmission) gearS.add(c.transmission);
+      if (c.body_type) bodyS.add(c.body_type);
+      if (c.color) colS.add(c.color);
+
+      if (c.make && c.model) (modelsMap[c.make] ||= new Set()).add(c.model);
+
+      const en = num(c.engine_size_l);
+      if (isFinite(en) && en > 0) engS.add(Math.round(en * 10) / 10);
+
+      const y = num(c.year);
+      if (isFinite(y)){
+        if (!isFinite(yMin2) || y < yMin2) yMin2 = y;
+        if (!isFinite(yMax2) || y > yMax2) yMax2 = y;
+      }
+    }
+
+    if (idx < all.length){
+      setTimeout(step, 0); // yield back to UI
+      return;
+    }
+
+    // finished: replace globals + update the selects if they exist
+    const makesFinal = uniqueSorted([...makesS]);
+    const fuelsFinal = uniqueSorted([...fuelsS]);
+    const gearFinal  = uniqueSorted([...gearS]);
+    const bodyFinal  = uniqueSorted([...bodyS]).filter(Boolean);
+    const colFinal   = uniqueSorted([...colS]).filter(Boolean);
+    const engFinal   = [...engS].sort((a,b)=>a-b);
+
+    // overwrite the existing arrays in-place if possible
+    allMakes.splice(0, allMakes.length, ...makesFinal);
+    fuels.splice(0, fuels.length, ...fuelsFinal);
+    gearboxes.splice(0, gearboxes.length, ...gearFinal);
+    bodytypes.splice(0, bodytypes.length, ...bodyFinal);
+    colours.splice(0, colours.length, ...colFinal);
+    engines.splice(0, engines.length, ...engFinal);
+    yearMin = isFinite(yMin2) ? yMin2 : yearMin;
+    yearMax = isFinite(yMax2) ? yMax2 : yearMax;
+
+    Object.keys(modelsMap).forEach(m => {
+      modelsByMake[m] = uniqueSorted([...modelsMap[m]]);
+    });
+
+    // If UI already built, refresh dropdowns (no rerender)
+    try{
+      setSelectOptions(document.getElementById('asf-make'), allMakes, 'Any make');
+      setSelectOptions(document.getElementById('asf-fuel'), fuels, 'Any fuel');
+      setSelectOptions(document.getElementById('asf-gearbox'), gearboxes, 'Any gearbox');
+      setSelectOptions(document.getElementById('asf-bodytype'), bodytypes, 'Any body type');
+      setSelectOptions(document.getElementById('asf-colour'), colours, 'Any colour');
+    }catch(e){}
+
+    window.__ticaryFullListsReady = true;
+    console.log('[ticary] ✅ full filter lists ready');
+  }
+
+  setTimeout(step, 0);
+}
 
    state = {
     sort: 'price-desc',

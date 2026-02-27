@@ -78,6 +78,18 @@ window.addEventListener('error', (e) => {
 window.addEventListener('unhandledrejection', (e) => {
   try { console.warn('[ticary] unhandled rejection:', e && e.reason ? e.reason : e); } catch(_) {}
 });
+
+    function requestPartBApply(){
+    if (window.__ticaryApplyQueued) return;
+    window.__ticaryApplyQueued = true;
+
+    setTimeout(function(){
+      window.__ticaryApplyQueued = false;
+      try{
+        if (typeof window.__ticaryApply === 'function') window.__ticaryApply();
+      }catch(e){}
+    }, 0);
+  }
   
   // =========================
   // CARD RENDERER (Part B calls this)
@@ -374,22 +386,13 @@ window.__ticaryCars = Array.isArray(cars)
 
   renderInitial(listInner, window.__ticaryCars);
 
-  try{
-    if (typeof window.__ticaryApply === 'function') window.__ticaryApply();
-  }catch(e){}
+  requestPartBApply();
 
   log('✅ cars ready:', (window.__ticaryCars||[]).length);
 
         // Signal to Part B (and anything else) that cars are now available
   try { window.dispatchEvent(new Event('ticary:cars-ready')); } catch(e){}
-
-  // Race-proof: if Part B defines __ticaryApply slightly later, call again
-  setTimeout(function(){
-    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
-  }, 0);
-  setTimeout(function(){
-    try{ if (typeof window.__ticaryApply === 'function') window.__ticaryApply(); }catch(e){}
-  }, 250);
+      
 });
 
   }
@@ -621,7 +624,18 @@ const listInner =
   listInner.setAttribute('data-as-grid', '1');
 
 // ✅ Wait for data before proceeding (event-based, race-proof)
-if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
+// Wait until:
+// 1) cars exist
+// 2) at least 1 card has rendered
+if (
+  !Array.isArray(window.__ticaryCars) ||
+  window.__ticaryCars.length === 0 ||
+  !document.querySelector('.as-card')
+) {
+  if (tries < 60) return setTimeout(() => bootPartB(tries + 1), 120);
+  console.warn('Part B waiting on DOM + cars');
+  return;
+}
   if (!window.__ticaryWaitCarsBound) {
     window.__ticaryWaitCarsBound = true;
 
@@ -639,12 +653,10 @@ if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
 
     // ✅ Build from full dataset in memory (NOT from DOM)
   const rawCarsAll = Array.isArray(window.__ticaryCars) ? window.__ticaryCars : [];
-  window.__ticaryCarsAll = rawCarsAll; // keep the full set accessible
+  window.__ticaryCarsAll = rawCarsAll;
 
-  // Only scan a small slice up-front so the UI doesn't "hang"
-  const rawCars = rawCarsAll.length > 6000 ? rawCarsAll.slice(0, 6000) : rawCarsAll;
-
-  const items = rawCars.map((car) => {
+  // ✅ DO NOT SLICE HERE
+  const items = rawCarsAll.map((car) => {
     car = car || {};
 
     // ✅ Compatibility aliases for older map/popup code (Part C)
@@ -723,11 +735,24 @@ if (!Array.isArray(window.__ticaryCars) || window.__ticaryCars.length === 0) {
   // ✅ EXPOSE EARLY 
 window.__ticaryItems = items;
 window.__ticaryApply = function () {
+
+  // 🔒 Prevent overlapping / stacked apply calls
+  if (window.__ticaryApplyRunning) return;
+  window.__ticaryApplyRunning = true;
+
   try {
-    if (!state) return setTimeout(window.__ticaryApply, 50);
+
+    if (!state) {
+      window.__ticaryApplyRunning = false;
+      return setTimeout(window.__ticaryApply, 50);
+    }
+
     apply();
+
   } catch (e) {
     console.error('❌ Part B apply() crashed', e);
+  } finally {
+    window.__ticaryApplyRunning = false;
   }
 };
 
